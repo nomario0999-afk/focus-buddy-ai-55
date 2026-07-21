@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import focoMascot from "@/assets/foco-mascot.png";
+import { checkFocus } from "@/lib/focus-check.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -21,7 +23,35 @@ function Index() {
   const [secondsLeft, setSecondsLeft] = useState(DURATIONS.focus);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
+  const [streak, setStreak] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Webcam / focus monitoring
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [camOn, setCamOn] = useState(false);
+  const [camError, setCamError] = useState<string | null>(null);
+  const [monitoring, setMonitoring] = useState(true);
+  const [lastCheck, setLastCheck] = useState<{
+    focused: boolean;
+    reason: string;
+    at: number;
+  } | null>(null);
+  const [warningLevel, setWarningLevel] = useState(0); // 0 ok, 1 warn, 2 final, 3 streak lost
+  const [isChecking, setIsChecking] = useState(false);
+  const checkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const runCheck = useServerFn(checkFocus);
+
+  // Hydrate streak from localStorage
+  useEffect(() => {
+    try {
+      const s = Number(localStorage.getItem("focuser.streak") ?? "0");
+      if (!Number.isNaN(s)) setStreak(s);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem("focuser.streak", String(streak)); } catch { /* ignore */ }
+  }, [streak]);
 
   useEffect(() => {
     if (!running) return;
@@ -29,7 +59,11 @@ function Index() {
       setSecondsLeft((s) => {
         if (s <= 1) {
           setRunning(false);
-          if (mode === "focus") setSessions((n) => n + 1);
+          if (mode === "focus") {
+            setSessions((n) => n + 1);
+            setStreak((n) => n + 1);
+            setWarningLevel(0);
+          }
           return 0;
         }
         return s - 1;
@@ -44,10 +78,134 @@ function Index() {
     setMode(m);
     setSecondsLeft(DURATIONS[m]);
     setRunning(false);
+    setWarningLevel(0);
   };
+
+  // Start / stop webcam
+  const startCam = useCallback(async () => {
+    setCamError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240, facingMode: "user" },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+      setCamOn(true);
+    } catch (e) {
+      setCamError(e instanceof Error ? e.message : "Camera unavailable");
+      setCamOn(false);
+    }
+  }, []);
+  const stopCam = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCamOn(false);
+  }, []);
+  useEffect(() => () => stopCam(), [stopCam]);
+
+  const speak = useCallback((text: string) => {
+    try {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05;
+      u.pitch = 1.1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch { /* ignore */ }
+  }, []);
+
+  const beep = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = 880;
+      o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      o.start(); o.stop(ctx.currentTime + 0.65);
+    } catch { /* ignore */ }
+  }, []);
+
+  const captureFrame = useCallback((): string | null => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) return null;
+    const canvas = document.createElement("canvas");
+    const w = 320, h = 240;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", 0.6);
+  }, []);
+
+  const doFocusCheck = useCallback(async () => {
+    if (isChecking) return;
+    const img = captureFrame();
+    if (!img) return;
+    setIsChecking(true);
+    try {
+      const result = await runCheck({ data: { imageDataUrl: img } });
+      setLastCheck({ focused: result.focused, reason: result.reason, at: Date.now() });
+      if (result.focused) {
+        setWarningLevel(0);
+      } else {
+        setWarningLevel((lvl) => {
+          const next = Math.min(lvl + 1, 3);
+          if (next === 1) {
+            setRunning(false);
+            beep();
+            speak("Hey! Foco noticed you're not focusing. Timer paused. Get back to work or the session ends.");
+          } else if (next === 2) {
+            beep();
+            speak("Final warning! Focus now, or your streak will be lost.");
+          } else if (next === 3) {
+            setRunning(false);
+            setSecondsLeft(DURATIONS[mode]);
+            setStreak(0);
+            beep();
+            speak("Streak reset. Try again when you're ready.");
+          }
+          return next;
+        });
+      }
+    } catch (e) {
+      console.warn("Focus check failed", e);
+    } finally {
+      setIsChecking(false);
+    }
+  }, [captureFrame, runCheck, isChecking, beep, speak, mode]);
+
+  // Interval: run check every 20s while focused session is running and cam on
+  useEffect(() => {
+    if (!camOn || !monitoring || !running || mode !== "focus") return;
+    // First check after 8s so the user has a moment to settle in
+    const first = setTimeout(() => { void doFocusCheck(); }, 8000);
+    checkTimerRef.current = setInterval(() => { void doFocusCheck(); }, 20000);
+    return () => {
+      clearTimeout(first);
+      if (checkTimerRef.current) clearInterval(checkTimerRef.current);
+    };
+  }, [camOn, monitoring, running, mode, doFocusCheck]);
 
   const progress = 1 - secondsLeft / DURATIONS[mode];
   const circumference = 2 * Math.PI * 130;
+
+  const warningTone =
+    warningLevel === 0
+      ? null
+      : warningLevel === 1
+      ? { title: "You seem distracted", body: "Foco paused the timer. Get back to your work to resume." }
+      : warningLevel === 2
+      ? { title: "Final warning", body: "Focus now, or Foco will end this session and reset your streak." }
+      : { title: "Streak lost", body: "The session ended and your streak was reset to 0. Try again!" };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -169,8 +327,96 @@ function Index() {
                 Reset
               </button>
               <div className="ml-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-                🏆 {sessions} sessions today
+                🏆 {sessions} today
               </div>
+              <div className="rounded-full bg-[oklch(0.95_0.06_55)] px-4 py-2 text-sm font-semibold text-[oklch(0.4_0.15_45)]">
+                🔥 Streak {streak}
+              </div>
+            </div>
+
+            {/* Webcam focus monitor */}
+            <div className="mt-4 w-full rounded-2xl border border-border bg-muted/40 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-xl bg-black">
+                    <video
+                      ref={videoRef}
+                      muted
+                      playsInline
+                      className="h-full w-full object-cover"
+                    />
+                    {!camOn && (
+                      <div className="absolute inset-0 flex items-center justify-center text-xs text-white/70">
+                        Camera off
+                      </div>
+                    )}
+                    {isChecking && (
+                      <div className="absolute right-1 top-1 h-2 w-2 animate-pulse rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="min-w-[160px]">
+                    <div className="text-sm font-bold">🤖 Foco is watching</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      AI checks your webcam every 20s during focus sessions and
+                      pauses the timer if you're distracted.
+                    </div>
+                    {lastCheck && (
+                      <div className={`mt-2 text-xs font-medium ${lastCheck.focused ? "text-[oklch(0.5_0.15_155)]" : "text-[oklch(0.55_0.2_30)]"}`}>
+                        {lastCheck.focused ? "✅ Focused" : "⚠️ Not focused"}
+                        {lastCheck.reason && <span className="text-muted-foreground"> — {lastCheck.reason}</span>}
+                      </div>
+                    )}
+                    {camError && <div className="mt-2 text-xs text-destructive">{camError}</div>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!camOn ? (
+                    <button
+                      onClick={startCam}
+                      className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+                    >
+                      Enable camera
+                    </button>
+                  ) : (
+                    <>
+                      <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={monitoring}
+                          onChange={(e) => setMonitoring(e.target.checked)}
+                        />
+                        AI monitoring
+                      </label>
+                      <button
+                        onClick={stopCam}
+                        className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-accent"
+                      >
+                        Stop camera
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {warningTone && (
+                <div
+                  className={`mt-4 flex items-start gap-3 rounded-xl p-4 text-sm ${
+                    warningLevel === 3
+                      ? "bg-destructive/10 text-destructive"
+                      : warningLevel === 2
+                      ? "bg-[oklch(0.95_0.12_55)] text-[oklch(0.4_0.18_45)]"
+                      : "bg-[oklch(0.96_0.08_85)] text-[oklch(0.4_0.15_75)]"
+                  }`}
+                >
+                  <div className="text-xl">
+                    {warningLevel === 3 ? "💔" : warningLevel === 2 ? "🚨" : "⚠️"}
+                  </div>
+                  <div>
+                    <div className="font-bold">{warningTone.title}</div>
+                    <div className="text-xs opacity-90">{warningTone.body}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
