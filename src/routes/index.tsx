@@ -42,6 +42,32 @@ function Index() {
   const checkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runCheck = useServerFn(checkFocus);
 
+  // PWA install prompt
+  const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<{ outcome: string }> } | null>(null);
+  const [installed, setInstalled] = useState(false);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as unknown as { prompt: () => Promise<{ outcome: string }> });
+    };
+    const installedHandler = () => { setInstalled(true); setInstallPrompt(null); };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
+    if (window.matchMedia?.("(display-mode: standalone)").matches) setInstalled(true);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
+  }, []);
+  const triggerInstall = useCallback(async () => {
+    if (!installPrompt) {
+      alert("To install Focuser on your phone:\n\n• Android (Chrome): tap the ⋮ menu → 'Install app' or 'Add to Home screen'.\n• iPhone (Safari): tap the Share button → 'Add to Home Screen'.");
+      return;
+    }
+    const res = await installPrompt.prompt();
+    if (res.outcome === "accepted") setInstallPrompt(null);
+  }, [installPrompt]);
+
   // Hydrate streak from localStorage
   useEffect(() => {
     try {
@@ -80,6 +106,22 @@ function Index() {
     setRunning(false);
     setWarningLevel(0);
   };
+
+  const handleStartToggle = () => {
+    if (!running && mode === "focus" && !camOn) {
+      setCamError("Enable your camera to start a focus session — Foco needs to see you.");
+      return;
+    }
+    setRunning((r) => !r);
+  };
+
+  // Auto-pause the timer if the camera turns off during a focus session
+  useEffect(() => {
+    if (running && mode === "focus" && !camOn) {
+      setRunning(false);
+      setCamError("Camera is off — timer paused. Turn the camera back on to continue.");
+    }
+  }, [camOn, running, mode]);
 
   // Start / stop webcam
   const startCam = useCallback(async () => {
@@ -315,7 +357,7 @@ function Index() {
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => setRunning((r) => !r)}
+                onClick={handleStartToggle}
                 className="rounded-full bg-primary px-8 py-3 text-base font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90"
               >
                 {running ? "Pause" : secondsLeft === 0 ? "Restart" : "Start"}
@@ -469,8 +511,21 @@ function Index() {
           <h2 className="text-3xl font-black md:text-4xl">Start focusing today.</h2>
           <p className="mx-auto mt-2 max-w-md text-white/90">One app. Endless possibilities. Download Focuser free.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary shadow-md">🍎 App Store</button>
-            <button className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary shadow-md">▶ Google Play</button>
+            <button
+              onClick={triggerInstall}
+              className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary shadow-md hover:opacity-90"
+            >
+              {installed ? "✅ Installed" : "📱 Install on your phone"}
+            </button>
+            <a
+              href="#timer"
+              className="rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/20"
+            >
+              Try it in browser
+            </a>
+          </div>
+          <div className="mx-auto mt-4 max-w-sm text-xs text-white/80">
+            Focuser installs like a real app — Android (Chrome): menu → "Install app". iPhone (Safari): Share → "Add to Home Screen".
           </div>
         </div>
       </section>
