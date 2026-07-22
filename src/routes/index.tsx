@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
+import { askTutor } from "@/lib/ask-tutor.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -41,6 +42,46 @@ function Index() {
   const [isChecking, setIsChecking] = useState(false);
   const checkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runCheck = useServerFn(checkFocus);
+  const runAsk = useServerFn(askTutor);
+
+  // Study context + tutor chat
+  const [grade, setGrade] = useState("");
+  const [subject, setSubject] = useState("");
+  const [chat, setChat] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [question, setQuestion] = useState("");
+  const [askLoading, setAskLoading] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const g = localStorage.getItem("focuser.grade") ?? "";
+      const s = localStorage.getItem("focuser.subject") ?? "";
+      if (g) setGrade(g);
+      if (s) setSubject(s);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { try { localStorage.setItem("focuser.grade", grade); } catch { /* ignore */ } }, [grade]);
+  useEffect(() => { try { localStorage.setItem("focuser.subject", subject); } catch { /* ignore */ } }, [subject]);
+
+  const handleAsk = useCallback(async () => {
+    const q = question.trim();
+    if (!q || askLoading) return;
+    if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
+    setAskError(null);
+    const nextHistory = [...chat, { role: "user" as const, content: q }];
+    setChat(nextHistory);
+    setQuestion("");
+    setAskLoading(true);
+    try {
+      const res = await runAsk({ data: { subject, grade, history: chat, question: q } });
+      setChat([...nextHistory, { role: "assistant", content: res.answer }]);
+    } catch (e) {
+      setAskError(e instanceof Error ? e.message : "Something went wrong.");
+      setChat(chat); // rollback the user message so they can retry
+    } finally {
+      setAskLoading(false);
+    }
+  }, [question, askLoading, chat, subject, grade, runAsk]);
 
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<{ outcome: string }> } | null>(null);
