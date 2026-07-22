@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
+import { askTutor } from "@/lib/ask-tutor.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -41,6 +42,46 @@ function Index() {
   const [isChecking, setIsChecking] = useState(false);
   const checkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runCheck = useServerFn(checkFocus);
+  const runAsk = useServerFn(askTutor);
+
+  // Study context + tutor chat
+  const [grade, setGrade] = useState("");
+  const [subject, setSubject] = useState("");
+  const [chat, setChat] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [question, setQuestion] = useState("");
+  const [askLoading, setAskLoading] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const g = localStorage.getItem("focuser.grade") ?? "";
+      const s = localStorage.getItem("focuser.subject") ?? "";
+      if (g) setGrade(g);
+      if (s) setSubject(s);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { try { localStorage.setItem("focuser.grade", grade); } catch { /* ignore */ } }, [grade]);
+  useEffect(() => { try { localStorage.setItem("focuser.subject", subject); } catch { /* ignore */ } }, [subject]);
+
+  const handleAsk = useCallback(async () => {
+    const q = question.trim();
+    if (!q || askLoading) return;
+    if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
+    setAskError(null);
+    const nextHistory = [...chat, { role: "user" as const, content: q }];
+    setChat(nextHistory);
+    setQuestion("");
+    setAskLoading(true);
+    try {
+      const res = await runAsk({ data: { subject, grade, history: chat, question: q } });
+      setChat([...nextHistory, { role: "assistant", content: res.answer }]);
+    } catch (e) {
+      setAskError(e instanceof Error ? e.message : "Something went wrong.");
+      setChat(chat); // rollback the user message so they can retry
+    } finally {
+      setAskLoading(false);
+    }
+  }, [question, askLoading, chat, subject, grade, runAsk]);
 
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<{ outcome: string }> } | null>(null);
@@ -460,6 +501,93 @@ function Index() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Study context + AI tutor */}
+        <div className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">📚 What are you studying?</h2>
+              <p className="text-sm text-muted-foreground">Tell Foco your grade and subject, then ask any question.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grade / Level *</span>
+              <input
+                type="text"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value.slice(0, 40))}
+                placeholder="e.g. Grade 8"
+                className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Subject / Topic</span>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value.slice(0, 120))}
+                placeholder="e.g. Algebra — solving linear equations"
+                className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+            </label>
+          </div>
+
+          <div className="mt-6">
+            <div className="max-h-80 space-y-3 overflow-y-auto rounded-2xl bg-muted/40 p-4">
+              {chat.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Ask Foco anything about {subject.trim() || "your subject"} — explanations, examples, or step-by-step help.
+                </div>
+              ) : (
+                chat.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm shadow-sm ${
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card text-foreground border border-border"
+                      }`}
+                    >
+                      {m.content}
+                    </div>
+                  </div>
+                ))
+              )}
+              {askLoading && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground">
+                    Foco is thinking…
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {askError && <div className="mt-2 text-xs text-destructive">{askError}</div>}
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); void handleAsk(); }}
+              className="mt-3 flex gap-2"
+            >
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value.slice(0, 2000))}
+                placeholder={grade ? "Ask Foco a question…" : "Enter your grade above first"}
+                disabled={askLoading}
+                className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm outline-none focus:border-primary disabled:opacity-60"
+              />
+              <button
+                type="submit"
+                disabled={askLoading || !question.trim()}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90 disabled:opacity-50"
+              >
+                Ask
+              </button>
+            </form>
           </div>
         </div>
       </section>
