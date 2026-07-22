@@ -81,6 +81,22 @@ function Index() {
     setWarningLevel(0);
   };
 
+  const handleStartToggle = () => {
+    if (!running && mode === "focus" && !camOn) {
+      setCamError("Enable your camera to start a focus session — Foco needs to see you.");
+      return;
+    }
+    setRunning((r) => !r);
+  };
+
+  // Auto-pause the timer if the camera turns off during a focus session
+  useEffect(() => {
+    if (running && mode === "focus" && !camOn) {
+      setRunning(false);
+      setCamError("Camera is off — timer paused. Turn the camera back on to continue.");
+    }
+  }, [camOn, running, mode]);
+
   // Start / stop webcam
   const startCam = useCallback(async () => {
     setCamError(null);
@@ -315,7 +331,7 @@ function Index() {
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <button
-                onClick={() => setRunning((r) => !r)}
+                onClick={handleStartToggle}
                 className="rounded-full bg-primary px-8 py-3 text-base font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90"
               >
                 {running ? "Pause" : secondsLeft === 0 ? "Restart" : "Start"}
