@@ -4,12 +4,25 @@ import { useServerFn } from "@tanstack/react-start";
 import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
 import { askTutor } from "@/lib/ask-tutor.functions";
+import { summarizeSession } from "@/lib/session-summary.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 type Mode = "focus" | "short" | "long";
+
+type HistoryEntry = {
+  id: string;
+  at: number;
+  minutes: number;
+  subject: string;
+  grade: string;
+  summary: string;
+  focusScore: number;
+  tip: string;
+  distractions: number;
+};
 const DURATIONS: Record<Mode, number> = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
 const MODE_LABEL: Record<Mode, string> = { focus: "Focus", short: "Short Break", long: "Long Break" };
 
@@ -43,6 +56,14 @@ function Index() {
   const checkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runCheck = useServerFn(checkFocus);
   const runAsk = useServerFn(askTutor);
+  const runSummarize = useServerFn(summarizeSession);
+
+  // Progress history
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [summarizing, setSummarizing] = useState(false);
+  const checksRef = useRef(0);
+  const distractionsRef = useRef(0);
+  const summarizedRef = useRef(false);
 
   // Study context + tutor chat
   const [grade, setGrade] = useState("");
@@ -120,6 +141,25 @@ function Index() {
     try { localStorage.setItem("focuser.streak", String(streak)); } catch { /* ignore */ }
   }, [streak]);
 
+  // Hydrate progress history
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("focuser.history");
+      if (raw) {
+        const parsed = JSON.parse(raw) as HistoryEntry[];
+        if (Array.isArray(parsed)) setHistory(parsed);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const saveHistory = useCallback((entry: HistoryEntry) => {
+    setHistory((prev) => {
+      const next = [entry, ...prev].slice(0, 50);
+      try { localStorage.setItem("focuser.history", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
@@ -146,6 +186,9 @@ function Index() {
     setSecondsLeft(DURATIONS[m]);
     setRunning(false);
     setWarningLevel(0);
+    checksRef.current = 0;
+    distractionsRef.current = 0;
+    summarizedRef.current = false;
   };
 
   const handleStartToggle = () => {
@@ -237,6 +280,8 @@ function Index() {
     try {
       const result = await runCheck({ data: { imageDataUrl: img } });
       setLastCheck({ focused: result.focused, reason: result.reason, at: Date.now() });
+      checksRef.current += 1;
+      if (!result.focused) distractionsRef.current += 1;
       if (result.focused) {
         setWarningLevel(0);
       } else {
@@ -277,6 +322,51 @@ function Index() {
       if (checkTimerRef.current) clearInterval(checkTimerRef.current);
     };
   }, [camOn, monitoring, running, mode, doFocusCheck]);
+
+  // Generate an AI study-session summary when a focus session completes
+  const finishSession = useCallback(async () => {
+    const minutes = Math.round(DURATIONS.focus / 60);
+    const checks = checksRef.current;
+    const distractions = distractionsRef.current;
+    const questions = chat.filter((m) => m.role === "user").slice(-5).map((m) => m.content);
+    const fallbackScore = checks > 0 ? Math.max(0, Math.round(((checks - distractions) / checks) * 100)) : 100;
+    setSummarizing(true);
+    let result = {
+      summary: `Completed a ${minutes}-minute focus session${subject.trim() ? ` on ${subject.trim()}` : ""}.`,
+      focusScore: fallbackScore,
+      tip: "Keep your next session distraction-free to grow your streak.",
+    };
+    try {
+      result = await runSummarize({
+        data: { subject, grade, minutes, checks, distractions, streak: streak + 1, questions },
+      });
+    } catch (e) {
+      console.warn("Summary failed", e);
+    } finally {
+      setSummarizing(false);
+    }
+    saveHistory({
+      id: `${Date.now()}`,
+      at: Date.now(),
+      minutes,
+      subject: subject.trim(),
+      grade: grade.trim(),
+      summary: result.summary,
+      focusScore: result.focusScore,
+      tip: result.tip,
+      distractions,
+    });
+    checksRef.current = 0;
+    distractionsRef.current = 0;
+  }, [chat, subject, grade, streak, runSummarize, saveHistory]);
+
+  useEffect(() => {
+    if (mode !== "focus") return;
+    if (secondsLeft > 0) { summarizedRef.current = false; return; }
+    if (summarizedRef.current) return;
+    summarizedRef.current = true;
+    void finishSession();
+  }, [secondsLeft, mode, finishSession]);
 
   const progress = 1 - secondsLeft / DURATIONS[mode];
   const circumference = 2 * Math.PI * 130;
@@ -593,6 +683,66 @@ function Index() {
       </section>
 
       {/* Features */}
+      {/* Progress history */}
+      <section id="progress" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">📈 Progress history</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Every completed focus session gets an AI recap saved on this device.
+              </p>
+            </div>
+            {history.length > 0 && (
+              <button
+                onClick={() => {
+                  setHistory([]);
+                  try { localStorage.removeItem("focuser.history"); } catch { /* ignore */ }
+                }}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+              >
+                Clear history
+              </button>
+            )}
+          </div>
+
+          {summarizing && (
+            <div className="mt-4 rounded-2xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+              Foco is writing your session summary…
+            </div>
+          )}
+
+          {history.length === 0 && !summarizing ? (
+            <div className="mt-6 rounded-2xl bg-muted/40 py-10 text-center text-sm text-muted-foreground">
+              No sessions yet — finish a focus session to get your first summary.
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {history.map((h) => (
+                <div key={h.id} className="rounded-2xl border border-border bg-background p-4">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">
+                      {new Date(h.at).toLocaleString()}
+                    </span>
+                    <span>• {h.minutes} min</span>
+                    {h.subject && <span>• {h.subject}</span>}
+                    {h.grade && <span>• Grade {h.grade}</span>}
+                    <span className="ml-auto rounded-full bg-accent px-2.5 py-0.5 font-semibold text-accent-foreground">
+                      Focus {h.focusScore}%
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-foreground">{h.summary}</p>
+                  {h.tip && <p className="mt-1 text-xs text-muted-foreground">💡 {h.tip}</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {h.distractions === 0 ? "No distractions detected" : `${h.distractions} distraction${h.distractions > 1 ? "s" : ""} detected`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       <section id="features" className="mx-auto max-w-6xl px-6 pb-20">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Why students love Focuser</h2>
         <p className="mt-2 max-w-2xl text-muted-foreground">Six focused tools that turn scattered study time into real progress.</p>
