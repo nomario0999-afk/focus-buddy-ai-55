@@ -321,6 +321,51 @@ function Index() {
     };
   }, [camOn, monitoring, running, mode, doFocusCheck]);
 
+  // Generate an AI study-session summary when a focus session completes
+  const finishSession = useCallback(async () => {
+    const minutes = Math.round(DURATIONS.focus / 60);
+    const checks = checksRef.current;
+    const distractions = distractionsRef.current;
+    const questions = chat.filter((m) => m.role === "user").slice(-5).map((m) => m.content);
+    const fallbackScore = checks > 0 ? Math.max(0, Math.round(((checks - distractions) / checks) * 100)) : 100;
+    setSummarizing(true);
+    let result = {
+      summary: `Completed a ${minutes}-minute focus session${subject.trim() ? ` on ${subject.trim()}` : ""}.`,
+      focusScore: fallbackScore,
+      tip: "Keep your next session distraction-free to grow your streak.",
+    };
+    try {
+      result = await runSummarize({
+        data: { subject, grade, minutes, checks, distractions, streak: streak + 1, questions },
+      });
+    } catch (e) {
+      console.warn("Summary failed", e);
+    } finally {
+      setSummarizing(false);
+    }
+    saveHistory({
+      id: `${Date.now()}`,
+      at: Date.now(),
+      minutes,
+      subject: subject.trim(),
+      grade: grade.trim(),
+      summary: result.summary,
+      focusScore: result.focusScore,
+      tip: result.tip,
+      distractions,
+    });
+    checksRef.current = 0;
+    distractionsRef.current = 0;
+  }, [chat, subject, grade, streak, runSummarize, saveHistory]);
+
+  useEffect(() => {
+    if (mode !== "focus") return;
+    if (secondsLeft > 0) { summarizedRef.current = false; return; }
+    if (summarizedRef.current) return;
+    summarizedRef.current = true;
+    void finishSession();
+  }, [secondsLeft, mode, finishSession]);
+
   const progress = 1 - secondsLeft / DURATIONS[mode];
   const circumference = 2 * Math.PI * 130;
 
