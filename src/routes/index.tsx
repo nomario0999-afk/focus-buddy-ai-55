@@ -447,6 +447,9 @@ function Index() {
 
       {/* Timer */}
       <section id="timer" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="mb-6" id="account">
+          <AccountPanel profile={profile} onChange={setProfile} />
+        </div>
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-10">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
