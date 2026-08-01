@@ -56,6 +56,14 @@ function Index() {
   const checkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runCheck = useServerFn(checkFocus);
   const runAsk = useServerFn(askTutor);
+  const runSummarize = useServerFn(summarizeSession);
+
+  // Progress history
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [summarizing, setSummarizing] = useState(false);
+  const checksRef = useRef(0);
+  const distractionsRef = useRef(0);
+  const summarizedRef = useRef(false);
 
   // Study context + tutor chat
   const [grade, setGrade] = useState("");
