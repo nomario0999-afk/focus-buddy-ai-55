@@ -5,6 +5,7 @@ import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
 import { askTutor } from "@/lib/ask-tutor.functions";
 import { summarizeSession } from "@/lib/session-summary.functions";
+import AccountPanel, { loadProfile, type Profile } from "@/components/AccountPanel";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -60,6 +61,8 @@ function Index() {
 
   // Progress history
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => { setProfile(loadProfile()); }, []);
   const [summarizing, setSummarizing] = useState(false);
   const checksRef = useRef(0);
   const distractionsRef = useRef(0);
