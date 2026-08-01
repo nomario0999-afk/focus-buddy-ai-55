@@ -280,6 +280,8 @@ function Index() {
     try {
       const result = await runCheck({ data: { imageDataUrl: img } });
       setLastCheck({ focused: result.focused, reason: result.reason, at: Date.now() });
+      checksRef.current += 1;
+      if (!result.focused) distractionsRef.current += 1;
       if (result.focused) {
         setWarningLevel(0);
       } else {
