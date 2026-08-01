@@ -5,6 +5,7 @@ import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
 import { askTutor } from "@/lib/ask-tutor.functions";
 import { summarizeSession } from "@/lib/session-summary.functions";
+import AccountPanel, { loadProfile, type Profile } from "@/components/AccountPanel";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -60,6 +61,8 @@ function Index() {
 
   // Progress history
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => { setProfile(loadProfile()); }, []);
   const [summarizing, setSummarizing] = useState(false);
   const checksRef = useRef(0);
   const distractionsRef = useRef(0);
@@ -393,9 +396,14 @@ function Index() {
           <a href="#features" className="hover:text-foreground">Features</a>
           <a href="#for-who" className="hover:text-foreground">For</a>
           <a href="#timer" className="hover:text-foreground">Timer</a>
+          <a href="#account" className="hover:text-foreground">Account</a>
         </nav>
-        <a href="#timer" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90">
-          Start Focusing
+        <a
+          href="#account"
+          className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90"
+          style={{ background: "var(--gradient-fun)" }}
+        >
+          {profile ? `${profile.avatar} ${profile.name.split(" ")[0]}` : "Create account"}
         </a>
       </header>
 
@@ -444,6 +452,9 @@ function Index() {
 
       {/* Timer */}
       <section id="timer" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="mb-6" id="account">
+          <AccountPanel profile={profile} onChange={setProfile} />
+        </div>
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-10">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -812,6 +823,14 @@ function Index() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-6 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} Focuser</span>
           <span>Focus. Learn. Grow.</span>
+        </div>
+        <div className="px-6 pb-8 text-center">
+          <p
+            className="text-base font-black tracking-tight text-transparent"
+            style={{ background: "var(--gradient-fun)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
+          >
+            Founders — made by Muhammad Noman Hussain and Ammar Khan
+          </p>
         </div>
       </footer>
     </div>
