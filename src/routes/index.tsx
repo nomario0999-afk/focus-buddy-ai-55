@@ -4,12 +4,25 @@ import { useServerFn } from "@tanstack/react-start";
 import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
 import { askTutor } from "@/lib/ask-tutor.functions";
+import { summarizeSession } from "@/lib/session-summary.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 type Mode = "focus" | "short" | "long";
+
+type HistoryEntry = {
+  id: string;
+  at: number;
+  minutes: number;
+  subject: string;
+  grade: string;
+  summary: string;
+  focusScore: number;
+  tip: string;
+  distractions: number;
+};
 const DURATIONS: Record<Mode, number> = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
 const MODE_LABEL: Record<Mode, string> = { focus: "Focus", short: "Short Break", long: "Long Break" };
 
