@@ -396,9 +396,14 @@ function Index() {
           <a href="#features" className="hover:text-foreground">Features</a>
           <a href="#for-who" className="hover:text-foreground">For</a>
           <a href="#timer" className="hover:text-foreground">Timer</a>
+          <a href="#account" className="hover:text-foreground">Account</a>
         </nav>
-        <a href="#timer" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90">
-          Start Focusing
+        <a
+          href="#account"
+          className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90"
+          style={{ background: "var(--gradient-fun)" }}
+        >
+          {profile ? `${profile.avatar} ${profile.name.split(" ")[0]}` : "Create account"}
         </a>
       </header>
 
@@ -818,6 +823,14 @@ function Index() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-6 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} Focuser</span>
           <span>Focus. Learn. Grow.</span>
+        </div>
+        <div className="px-6 pb-8 text-center">
+          <p
+            className="text-base font-black tracking-tight text-transparent"
+            style={{ background: "var(--gradient-fun)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
+          >
+            Founders — made by Muhammad Noman Hussain and Ammar Khan
+          </p>
         </div>
       </footer>
     </div>
