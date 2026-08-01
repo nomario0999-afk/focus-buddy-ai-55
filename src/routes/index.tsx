@@ -186,6 +186,9 @@ function Index() {
     setSecondsLeft(DURATIONS[m]);
     setRunning(false);
     setWarningLevel(0);
+    checksRef.current = 0;
+    distractionsRef.current = 0;
+    summarizedRef.current = false;
   };
 
   const handleStartToggle = () => {
