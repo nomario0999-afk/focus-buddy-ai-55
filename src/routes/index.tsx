@@ -141,6 +141,25 @@ function Index() {
     try { localStorage.setItem("focuser.streak", String(streak)); } catch { /* ignore */ }
   }, [streak]);
 
+  // Hydrate progress history
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("focuser.history");
+      if (raw) {
+        const parsed = JSON.parse(raw) as HistoryEntry[];
+        if (Array.isArray(parsed)) setHistory(parsed);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const saveHistory = useCallback((entry: HistoryEntry) => {
+    setHistory((prev) => {
+      const next = [entry, ...prev].slice(0, 50);
+      try { localStorage.setItem("focuser.history", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!running) return;
     intervalRef.current = setInterval(() => {
