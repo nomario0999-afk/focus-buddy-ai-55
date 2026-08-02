@@ -25,6 +25,90 @@ type Mode = "focus" | "short" | "long";
 const DURATIONS: Record<Mode, number> = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
 const MODE_LABEL: Record<Mode, string> = { focus: "Focus", short: "Short Break", long: "Long Break" };
 
+const FEATURES: CardItem[] = [
+  {
+    icon: "🧠", title: "AI Focus Coaching", desc: "Personalized nudges to help you stay on track.", tint: "oklch(0.94 0.05 250)",
+    points: [
+      "Foco watches your webcam every 20 seconds during a focus session.",
+      "Pauses the timer and speaks a friendly warning the moment you drift off.",
+      "Escalates to a final warning, then ends the session and resets your streak.",
+      "Personalised nudges tuned to your age, grade and subject.",
+    ],
+  },
+  {
+    icon: "⏱️", title: "Smart Pomodoro", desc: "Guided focus and break cycles that actually work.", tint: "oklch(0.94 0.06 55)",
+    points: [
+      "25-minute focus blocks with 5-minute short and 15-minute long breaks.",
+      "Camera must be on to start — no accidental fake sessions.",
+      "Live progress ring, session counter and 🔥 streak tracker.",
+      "Auto-pauses if your camera turns off mid-session.",
+    ],
+  },
+  {
+    icon: "📚", title: "AI Study Planner", desc: "A study plan built around your goals and schedule.", tint: "oklch(0.94 0.06 155)",
+    points: [
+      "Tell Foco your grade and subject once — every answer adapts to it.",
+      "Each session ends with a tip on what to study next.",
+      "Break big topics into focus blocks you can finish today.",
+    ],
+  },
+  {
+    icon: "📈", title: "Progress Tracking", desc: "See streaks, focus minutes, and topics mastered.", tint: "oklch(0.94 0.05 290)",
+    points: [
+      "Every finished session is saved to your profile's history.",
+      "AI focus score from 0–100% based on real distraction checks.",
+      "History, streaks and credits are separate for each person on the device.",
+    ],
+  },
+  {
+    icon: "🏅", title: "Rewards & Badges", desc: "Unlock achievements for every milestone.", tint: "oklch(0.95 0.05 85)",
+    points: [
+      `Earn ${STREAK_BONUS_CREDITS} credits every time your streak grows.`,
+      "Beat your best streak and keep the 🔥 alive.",
+      "Win extra credits by solving maths portals in Portal Racer.",
+    ],
+  },
+  {
+    icon: "🤖", title: "AI Homework Helper", desc: "Step-by-step explanations, not just answers.", tint: "oklch(0.94 0.05 220)",
+    points: [
+      "Ask anything about your subject — Foco explains step by step.",
+      "Answers are written for your grade level, never above your head.",
+      "Guides you to the answer instead of doing the homework for you.",
+      "Costs 1 credit per question.",
+    ],
+  },
+];
+
+const AUDIENCES: CardItem[] = [
+  {
+    icon: "👨‍🎓", title: "Students", desc: "Beat distractions and understand more.", tint: "oklch(0.94 0.05 250)",
+    points: [
+      "AI focus coach keeps you honest during study time.",
+      "Homework helper explains anything at your grade level.",
+      "Maths mini-games for a quick brain break between sessions.",
+      "Streaks, credits and badges make studying feel like a game.",
+    ],
+  },
+  {
+    icon: "👨‍👩‍👧", title: "Parents", desc: "Real progress insights, no guesswork.", tint: "oklch(0.95 0.05 85)",
+    points: [
+      "A separate profile for every child on the same device.",
+      "Session history with focus scores and AI recaps.",
+      "Clear privacy controls — camera and AI can be switched off any time.",
+      "Kid-friendly theme with bigger text and playful colours.",
+    ],
+  },
+  {
+    icon: "👩‍🏫", title: "Teachers", desc: "Track class progress and save prep time.", tint: "oklch(0.94 0.06 155)",
+    points: [
+      "Switch between student profiles in one tap.",
+      "Focus scores show who really stayed on task.",
+      "Ready-made maths practice through Portal Racer.",
+      "Works offline as an installable app on any phone or tablet.",
+    ],
+  },
+];
+
 function formatTime(s: number) {
   const m = Math.floor(s / 60).toString().padStart(2, "0");
   const sec = (s % 60).toString().padStart(2, "0");
@@ -222,6 +306,10 @@ function Index() {
   // Start / stop webcam
   const startCam = useCallback(async () => {
     setCamError(null);
+    if (profile?.consent && !profile.consent.camera) {
+      setCamError("Camera checks are turned off in your privacy settings. Enable them in ⚙️ Profile settings.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 320, height: 240, facingMode: "user" },
@@ -237,7 +325,7 @@ function Index() {
       setCamError(e instanceof Error ? e.message : "Camera unavailable");
       setCamOn(false);
     }
-  }, []);
+  }, [profile]);
   const stopCam = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
@@ -405,6 +493,7 @@ function Index() {
           <a href="#features" className="hover:text-foreground">Features</a>
           <a href="#for-who" className="hover:text-foreground">For</a>
           <a href="#timer" className="hover:text-foreground">Timer</a>
+          <a href="#games" className="hover:text-foreground">Games</a>
           <a href="#account" className="hover:text-foreground">Account</a>
         </nav>
         <a
@@ -412,7 +501,7 @@ function Index() {
           className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90"
           style={{ background: "var(--gradient-fun)" }}
         >
-          {profile ? `${profile.avatar} ${profile.name.split(" ")[0]}` : "Create account"}
+          {profile ? `${profile.avatar} ${profile.name.split(" ")[0]} · 🪙 ${credits.toLocaleString()}` : "Create account"}
         </a>
       </header>
 
@@ -461,8 +550,27 @@ function Index() {
 
       {/* Timer */}
       <section id="timer" className="mx-auto max-w-6xl px-6 pb-20">
-        <div className="mb-6" id="account">
-          <AccountPanel profile={profile} onChange={setProfile} />
+        <div className="mb-6 space-y-6" id="account">
+          <ProfileHub
+            profiles={profiles}
+            active={profile}
+            onSwitch={setActiveId}
+            onCreate={(v) => addProfile(v as never)}
+            onUpdate={updateProfile}
+            onDelete={removeProfile}
+          />
+          {profile && (
+            <CreditsPanel
+              profile={profile}
+              onSubscribe={() =>
+                patchActive(
+                  profile.subscribed
+                    ? { subscribed: false }
+                    : { subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS },
+                )
+              }
+            />
+          )}
         </div>
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-10">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -763,44 +871,22 @@ function Index() {
         </div>
       </section>
 
+      {/* Mini games */}
+      <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
+        <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
+      </section>
+
       <section id="features" className="mx-auto max-w-6xl px-6 pb-20">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Why students love Focuser</h2>
-        <p className="mt-2 max-w-2xl text-muted-foreground">Six focused tools that turn scattered study time into real progress.</p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            { icon: "🧠", title: "AI Focus Coaching", desc: "Personalized nudges to help you stay on track.", tint: "oklch(0.94 0.05 250)" },
-            { icon: "⏱️", title: "Smart Pomodoro", desc: "Guided focus and break cycles that actually work.", tint: "oklch(0.94 0.06 55)" },
-            { icon: "📚", title: "AI Study Planner", desc: "A study plan built around your goals and schedule.", tint: "oklch(0.94 0.06 155)" },
-            { icon: "📈", title: "Progress Tracking", desc: "See streaks, focus minutes, and topics mastered.", tint: "oklch(0.94 0.05 290)" },
-            { icon: "🏅", title: "Rewards & Badges", desc: "Unlock achievements for every milestone.", tint: "oklch(0.95 0.05 85)" },
-            { icon: "🤖", title: "AI Homework Helper", desc: "Step-by-step explanations, not just answers.", tint: "oklch(0.94 0.05 220)" },
-          ].map((f) => (
-            <div key={f.title} className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)] transition hover:-translate-y-1">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl" style={{ background: f.tint }}>
-                {f.icon}
-              </div>
-              <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+        <p className="mt-2 max-w-2xl text-muted-foreground">Six focused tools that turn scattered study time into real progress. Tap any card to see everything it does.</p>
+        <ExpandableCards items={FEATURES} />
       </section>
 
       {/* For who */}
       <section id="for-who" className="mx-auto max-w-6xl px-6 pb-20">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            { who: "Students", emoji: "👨‍🎓", line: "Beat distractions and understand more." },
-            { who: "Parents", emoji: "👨‍👩‍👧", line: "Real progress insights, no guesswork." },
-            { who: "Teachers", emoji: "👩‍🏫", line: "Track class progress and save prep time." },
-          ].map((p) => (
-            <div key={p.who} className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-card)]">
-              <div className="text-4xl">{p.emoji}</div>
-              <h3 className="mt-3 text-xl font-bold">{p.who}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{p.line}</p>
-            </div>
-          ))}
-        </div>
+        <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Made for everyone</h2>
+        <p className="mt-2 max-w-2xl text-muted-foreground">Tap a card to see exactly what Focuser gives you.</p>
+        <ExpandableCards items={AUDIENCES} columns={3} />
       </section>
 
       {/* CTA */}
@@ -842,6 +928,13 @@ function Index() {
           </p>
         </div>
       </footer>
+
+      {profilesReady && profile && !profile.consent && (
+        <ConsentGate
+          name={profile.name}
+          onAccept={(c) => patchActive({ consent: c })}
+        />
+      )}
     </div>
   );
 }
