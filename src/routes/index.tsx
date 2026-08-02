@@ -5,7 +5,16 @@ import focoMascot from "@/assets/foco-mascot.png";
 import { checkFocus } from "@/lib/focus-check.functions";
 import { askTutor } from "@/lib/ask-tutor.functions";
 import { summarizeSession } from "@/lib/session-summary.functions";
-import AccountPanel, { loadProfile, type Profile } from "@/components/AccountPanel";
+import ProfileHub from "@/components/ProfileHub";
+import ConsentGate from "@/components/ConsentGate";
+import CreditsPanel from "@/components/CreditsPanel";
+import PortalDriveGame from "@/components/PortalDriveGame";
+import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
+import {
+  useProfiles, resolvedTheme, loadHistory, saveHistoryList,
+  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS,
+  type HistoryEntry,
+} from "@/lib/profiles";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -13,17 +22,6 @@ export const Route = createFileRoute("/")({
 
 type Mode = "focus" | "short" | "long";
 
-type HistoryEntry = {
-  id: string;
-  at: number;
-  minutes: number;
-  subject: string;
-  grade: string;
-  summary: string;
-  focusScore: number;
-  tip: string;
-  distractions: number;
-};
 const DURATIONS: Record<Mode, number> = { focus: 25 * 60, short: 5 * 60, long: 15 * 60 };
 const MODE_LABEL: Record<Mode, string> = { focus: "Focus", short: "Short Break", long: "Long Break" };
 
@@ -38,7 +36,32 @@ function Index() {
   const [secondsLeft, setSecondsLeft] = useState(DURATIONS.focus);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
-  const [streak, setStreak] = useState(0);
+
+  // ── Profiles (multi-user), credits, consent, themes ──
+  const { profiles, active: profile, ready: profilesReady, setActiveId, addProfile, updateProfile, patchActive, removeProfile } = useProfiles();
+  const streak = profile?.streak ?? 0;
+  const credits = profile?.credits ?? 0;
+  const bumpStreak = useCallback(() => {
+    if (!profile) return;
+    patchActive({
+      streak: profile.streak + 1,
+      bestStreak: Math.max(profile.bestStreak, profile.streak + 1),
+      credits: profile.credits + STREAK_BONUS_CREDITS,
+    });
+  }, [profile, patchActive]);
+  const resetStreak = useCallback(() => { patchActive({ streak: 0 }); }, [patchActive]);
+  const addCredits = useCallback((n: number) => {
+    if (!profile) return;
+    patchActive({ credits: Math.max(0, profile.credits + n) });
+  }, [profile, patchActive]);
+
+  // Apply the age-based (or chosen) theme to the document
+  useEffect(() => {
+    const el = document.documentElement;
+    const theme = resolvedTheme(profile);
+    el.classList.remove("theme-kids", "theme-teen", "theme-adult", "theme-elder");
+    el.classList.add(`theme-${theme}`);
+  }, [profile]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Webcam / focus monitoring
@@ -61,8 +84,6 @@ function Index() {
 
   // Progress history
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  useEffect(() => { setProfile(loadProfile()); }, []);
   const [summarizing, setSummarizing] = useState(false);
   const checksRef = useRef(0);
   const distractionsRef = useRef(0);
@@ -91,6 +112,9 @@ function Index() {
     const q = question.trim();
     if (!q || askLoading) return;
     if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
+    if (!profile) { setAskError("Create a profile first so Foco knows who's asking."); return; }
+    if (profile.consent && !profile.consent.ai) { setAskError("Turn on “AI tutor & summaries” in Profile settings to ask questions."); return; }
+    if (profile.credits < 1) { setAskError("You're out of credits — subscribe to Focuser Pro for 25 SAR/month to get 500,000 credits."); return; }
     setAskError(null);
     const nextHistory = [...chat, { role: "user" as const, content: q }];
     setChat(nextHistory);
@@ -99,13 +123,14 @@ function Index() {
     try {
       const res = await runAsk({ data: { subject, grade, history: chat, question: q } });
       setChat([...nextHistory, { role: "assistant", content: res.answer }]);
+      addCredits(-1);
     } catch (e) {
       setAskError(e instanceof Error ? e.message : "Something went wrong.");
       setChat(chat); // rollback the user message so they can retry
     } finally {
       setAskLoading(false);
     }
-  }, [question, askLoading, chat, subject, grade, runAsk]);
+  }, [question, askLoading, chat, subject, grade, runAsk, profile, addCredits]);
 
   // PWA install prompt
   const [installPrompt, setInstallPrompt] = useState<{ prompt: () => Promise<{ outcome: string }> } | null>(null);
@@ -133,35 +158,19 @@ function Index() {
     if (res.outcome === "accepted") setInstallPrompt(null);
   }, [installPrompt]);
 
-  // Hydrate streak from localStorage
+  // History is linked to the active profile
   useEffect(() => {
-    try {
-      const s = Number(localStorage.getItem("focuser.streak") ?? "0");
-      if (!Number.isNaN(s)) setStreak(s);
-    } catch { /* ignore */ }
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem("focuser.streak", String(streak)); } catch { /* ignore */ }
-  }, [streak]);
-
-  // Hydrate progress history
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("focuser.history");
-      if (raw) {
-        const parsed = JSON.parse(raw) as HistoryEntry[];
-        if (Array.isArray(parsed)) setHistory(parsed);
-      }
-    } catch { /* ignore */ }
-  }, []);
+    setHistory(profile ? loadHistory(profile.id) : []);
+  }, [profile?.id]);
 
   const saveHistory = useCallback((entry: HistoryEntry) => {
+    if (!profile) return;
     setHistory((prev) => {
       const next = [entry, ...prev].slice(0, 50);
-      try { localStorage.setItem("focuser.history", JSON.stringify(next)); } catch { /* ignore */ }
+      saveHistoryList(profile.id, next);
       return next;
     });
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (!running) return;
@@ -171,7 +180,7 @@ function Index() {
           setRunning(false);
           if (mode === "focus") {
             setSessions((n) => n + 1);
-            setStreak((n) => n + 1);
+            bumpStreak();
             setWarningLevel(0);
           }
           return 0;
@@ -182,7 +191,7 @@ function Index() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [running, mode]);
+  }, [running, mode, bumpStreak]);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -300,7 +309,7 @@ function Index() {
           } else if (next === 3) {
             setRunning(false);
             setSecondsLeft(DURATIONS[mode]);
-            setStreak(0);
+            resetStreak();
             beep();
             speak("Streak reset. Try again when you're ready.");
           }
@@ -312,7 +321,7 @@ function Index() {
     } finally {
       setIsChecking(false);
     }
-  }, [captureFrame, runCheck, isChecking, beep, speak, mode]);
+  }, [captureFrame, runCheck, isChecking, beep, speak, mode, resetStreak]);
 
   // Interval: run check every 20s while focused session is running and cam on
   useEffect(() => {
