@@ -49,6 +49,11 @@ export default function PortalDriveGame({
   const laneRef = useRef(lane);
   laneRef.current = lane;
 
+  const portalLaneRef = useRef(portalLane);
+  portalLaneRef.current = portalLane;
+  const levelRef = useRef(level);
+  levelRef.current = level;
+
   const spawn = useCallback(() => {
     setPortalLane(Math.floor(Math.random() * 3));
     setZ(1);
@@ -87,11 +92,6 @@ export default function PortalDriveGame({
     raf.current = requestAnimationFrame(tick);
     return () => { if (raf.current) cancelAnimationFrame(raf.current); };
   }, [playing, question, level, age]);
-
-  const portalLaneRef = useRef(portalLane);
-  portalLaneRef.current = portalLane;
-  const levelRef = useRef(level);
-  levelRef.current = level;
 
   useEffect(() => { if (lives === 0) { setPlaying(false); setQuestion(null); } }, [lives]);
 
