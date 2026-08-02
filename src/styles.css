@@ -163,3 +163,33 @@
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-card);
 }
+
+/* ── Age-based themes (applied to <html> as .theme-kids / .theme-teen / .theme-adult / .theme-elder) ── */
+.theme-kids {
+  --radius: 1.5rem;
+  --primary: oklch(0.65 0.2 275);
+  --secondary: oklch(0.75 0.19 45);
+  --gradient-fun: linear-gradient(135deg, oklch(0.68 0.2 300), oklch(0.75 0.19 45) 50%, oklch(0.72 0.18 160));
+  --gradient-playful: linear-gradient(120deg, oklch(0.95 0.08 300), oklch(0.96 0.09 80) 50%, oklch(0.94 0.09 160));
+  font-size: 18px;
+}
+.theme-teen {
+  --radius: 1.15rem;
+  --primary: oklch(0.6 0.2 265);
+  --secondary: oklch(0.7 0.19 340);
+  --gradient-fun: linear-gradient(135deg, oklch(0.58 0.22 280), oklch(0.68 0.2 340) 55%, oklch(0.7 0.17 200));
+  font-size: 16.5px;
+}
+.theme-adult {
+  --radius: 0.9rem;
+  font-size: 16px;
+}
+.theme-elder {
+  --radius: 0.9rem;
+  --foreground: oklch(0.16 0.03 260);
+  --muted-foreground: oklch(0.38 0.03 250);
+  --border: oklch(0.82 0.02 240);
+  --primary: oklch(0.5 0.17 250);
+  font-size: 19px;
+}
+.theme-elder p, .theme-elder .text-sm { letter-spacing: 0.01em; }
