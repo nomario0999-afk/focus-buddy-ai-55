@@ -29,11 +29,14 @@ function makeQuestion(age: number, level: number): Question {
   };
 }
 
+const WIN_TARGET = 6; // correct portal answers needed to win the run
+
 export default function PortalDriveGame({
-  age = 12, onReward,
+  age = 12, onWin, winCredits = 70,
 }: {
   age?: number;
-  onReward?: (credits: number) => void;
+  onWin?: () => void;
+  winCredits?: number;
 }) {
   const [playing, setPlaying] = useState(false);
   const [lane, setLane] = useState(1);
@@ -42,12 +45,16 @@ export default function PortalDriveGame({
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [correct, setCorrect] = useState(0);
+  const [won, setWon] = useState(false);
   const [question, setQuestion] = useState<Question | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [road, setRoad] = useState(0);
   const raf = useRef<number | null>(null);
   const laneRef = useRef(lane);
   laneRef.current = lane;
+  const rewardedRef = useRef(false);
+  const answeringRef = useRef(false);
 
   const portalLaneRef = useRef(portalLane);
   portalLaneRef.current = portalLane;
@@ -61,6 +68,9 @@ export default function PortalDriveGame({
 
   const start = () => {
     setPlaying(true); setLives(3); setScore(0); setLevel(1); setLane(1); setQuestion(null); setFeedback(null);
+    setCorrect(0); setWon(false);
+    rewardedRef.current = false;
+    answeringRef.current = false;
     spawn();
   };
 
@@ -107,18 +117,28 @@ export default function PortalDriveGame({
   }, [playing]);
 
   const answerQ = (opt: number) => {
-    if (!question) return;
+    if (!question || answeringRef.current) return;
+    answeringRef.current = true;
     if (opt === question.answer) {
       setScore((s) => s + 10 * level);
       setLevel((l) => Math.min(9, l + 1));
+      setCorrect((c) => {
+        const next = c + 1;
+        if (next >= WIN_TARGET && !rewardedRef.current) {
+          rewardedRef.current = true;
+          setWon(true);
+          setPlaying(false);
+          onWin?.();
+        }
+        return next;
+      });
       setFeedback("🎉 Correct! Portal opened.");
-      onReward?.(1);
     } else {
       setLives((l) => Math.max(0, l - 1));
       setFeedback(`❌ It was ${question.answer}.`);
     }
     setQuestion(null);
-    setTimeout(() => setFeedback(null), 1600);
+    setTimeout(() => { setFeedback(null); answeringRef.current = false; }, 1200);
   };
 
   const depth = 1 - z; // 0 far → 1 near
@@ -131,11 +151,12 @@ export default function PortalDriveGame({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">🎮 Portal Racer — brain break</h2>
           <p className="text-sm text-muted-foreground">
-            Drive into the blue portal, then solve the multiplication, addition or subtraction inside.
+            Drive into the blue portal and solve {WIN_TARGET} maths challenges to win {winCredits} credits.
           </p>
         </div>
         <div className="flex gap-2 text-sm font-semibold">
           <span className="rounded-full bg-accent px-3 py-1 text-accent-foreground">⭐ {score}</span>
+          <span className="rounded-full bg-muted px-3 py-1">{correct}/{WIN_TARGET}</span>
           <span className="rounded-full bg-muted px-3 py-1">Lvl {level}</span>
           <span className="rounded-full bg-muted px-3 py-1">{"❤️".repeat(lives) || "💀"}</span>
         </div>
@@ -195,10 +216,14 @@ export default function PortalDriveGame({
         {/* overlays */}
         {!playing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 text-center text-white">
-            <div className="text-2xl font-black">{lives === 0 ? `Game over — ${score} points` : "🏎️ Portal Racer"}</div>
-            <p className="max-w-xs text-sm text-white/85">Use ← → keys or the buttons to steer into the blue portal and answer the maths question.</p>
+            <div className="text-2xl font-black">
+              {won ? `🏆 You won! +${winCredits} credits` : lives === 0 ? `Game over — ${score} points` : "🏎️ Portal Racer"}
+            </div>
+            <p className="max-w-xs text-sm text-white/85">
+              Use ← → keys or the buttons to steer into the blue portal and answer the maths question. Credits are only paid out when you win a full run.
+            </p>
             <button onClick={start} className="rounded-full bg-white px-6 py-2 text-sm font-bold text-primary hover:opacity-90">
-              {lives === 0 ? "Play again" : "Start driving"}
+              {lives === 0 || won ? "Play again" : "Start driving"}
             </button>
           </div>
         )}
