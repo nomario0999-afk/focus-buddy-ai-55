@@ -12,7 +12,7 @@ import GamesArcade from "@/components/GamesArcade";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
-  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS,
+  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
   type HistoryEntry,
 } from "@/lib/profiles";
 
