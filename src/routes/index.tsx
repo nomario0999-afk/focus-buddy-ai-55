@@ -66,7 +66,7 @@ const FEATURES: CardItem[] = [
     points: [
       `Earn ${STREAK_BONUS_CREDITS} credits every time your streak grows.`,
       "Beat your best streak and keep the 🔥 alive.",
-      "Win extra credits by solving maths portals in Portal Racer.",
+      `Win ${GAME_WIN_CREDITS} credits every time you beat a Brain Arcade or Portal Racer game.`,
     ],
   },
   {
