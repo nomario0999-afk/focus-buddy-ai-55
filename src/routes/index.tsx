@@ -198,7 +198,7 @@ function Index() {
     if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
     if (!profile) { setAskError("Create a profile first so Foco knows who's asking."); return; }
     if (profile.consent && !profile.consent.ai) { setAskError("Turn on “AI tutor & summaries” in Profile settings to ask questions."); return; }
-    if (profile.credits < 1) { setAskError("You're out of credits — subscribe to Focuser Pro for 25 SAR/month to get 500,000 credits."); return; }
+    if (profile.credits < 1) { setAskError(`You're out of credits — subscribe to Focuser Pro for ${SUBSCRIPTION_PRICE}/month to get 500,000 credits.`); return; }
     setAskError(null);
     const nextHistory = [...chat, { role: "user" as const, content: q }];
     setChat(nextHistory);
