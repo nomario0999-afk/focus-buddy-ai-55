@@ -8,7 +8,7 @@ import { summarizeSession } from "@/lib/session-summary.functions";
 import ProfileHub from "@/components/ProfileHub";
 import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
-import PortalDriveGame from "@/components/PortalDriveGame";
+import GamesArcade from "@/components/GamesArcade";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
@@ -873,7 +873,7 @@ function Index() {
 
       {/* Mini games */}
       <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
-        <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
+        <GamesArcade age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
       </section>
 
       <section id="features" className="mx-auto max-w-6xl px-6 pb-20">
