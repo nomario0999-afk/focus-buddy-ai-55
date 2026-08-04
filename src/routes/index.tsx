@@ -9,6 +9,7 @@ import ProfileHub from "@/components/ProfileHub";
 import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
+import GameArcade from "@/components/GameArcade";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
@@ -57,15 +58,15 @@ const FEATURES: CardItem[] = [
     points: [
       "Every finished session is saved to your profile's history.",
       "AI focus score from 0–100% based on real distraction checks.",
-      "History, streaks and credits are separate for each person on the device.",
+      "History, streaks and Focolara are separate for each person on the device.",
     ],
   },
   {
     icon: "🏅", title: "Rewards & Badges", desc: "Unlock achievements for every milestone.", tint: "oklch(0.95 0.05 85)",
     points: [
-      `Earn ${STREAK_BONUS_CREDITS} credits every time your streak grows.`,
+      `Earn ${STREAK_BONUS_CREDITS} Focolara every time your streak grows.`,
       "Beat your best streak and keep the 🔥 alive.",
-      "Win extra credits by solving maths portals in Portal Racer.",
+      "Win a mini-game in the arcade for +70 Focolara.",
     ],
   },
   {
@@ -74,7 +75,7 @@ const FEATURES: CardItem[] = [
       "Ask anything about your subject — Foco explains step by step.",
       "Answers are written for your grade level, never above your head.",
       "Guides you to the answer instead of doing the homework for you.",
-      "Costs 1 credit per question.",
+      "Costs 1 Focolara per question.",
     ],
   },
 ];
@@ -86,7 +87,7 @@ const AUDIENCES: CardItem[] = [
       "AI focus coach keeps you honest during study time.",
       "Homework helper explains anything at your grade level.",
       "Maths mini-games for a quick brain break between sessions.",
-      "Streaks, credits and badges make studying feel like a game.",
+      "Streaks, Focolara and badges make studying feel like a game.",
     ],
   },
   {
@@ -198,7 +199,7 @@ function Index() {
     if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
     if (!profile) { setAskError("Create a profile first so Foco knows who's asking."); return; }
     if (profile.consent && !profile.consent.ai) { setAskError("Turn on “AI tutor & summaries” in Profile settings to ask questions."); return; }
-    if (profile.credits < 1) { setAskError("You're out of credits — subscribe to Focuser Pro for 25 SAR/month to get 500,000 credits."); return; }
+    if (profile.credits < 1) { setAskError("You're out of Focolara — subscribe to Focuser Pro for $15/month to get 500,000 Focolara."); return; }
     setAskError(null);
     const nextHistory = [...chat, { role: "user" as const, content: q }];
     setChat(nextHistory);
@@ -873,7 +874,10 @@ function Index() {
 
       {/* Mini games */}
       <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
-        <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
+        <div className="space-y-6">
+          <GameArcade onWin={(c) => addCredits(c)} />
+          <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
+        </div>
       </section>
 
       <section id="features" className="mx-auto max-w-6xl px-6 pb-20">
