@@ -120,10 +120,9 @@ export const GAMES: GameDef[] = [
 ];
 
 export default function GameArcade({
-  age = 12, winCredits = 70, onWin,
+  age = 12, onWin,
 }: {
   age?: number;
-  winCredits?: number;
   onWin?: (gameTitle: string) => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -179,7 +178,7 @@ export default function GameArcade({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">🕹️ Brain Arcade — {GAMES.length} mini-games</h2>
           <p className="text-sm text-muted-foreground">
-            Win a game by getting {WIN_TARGET} answers right with {LIVES} lives → <strong>+{winCredits} credits</strong>. One payout per win, no credits for tapping around.
+            Win a game by getting {WIN_TARGET} answers right with {LIVES} lives. Pure brain break — <strong>games never give credits</strong>.
           </p>
         </div>
         {game && (
@@ -196,7 +195,7 @@ export default function GameArcade({
               <div className="flex h-11 w-11 items-center justify-center rounded-xl text-2xl" style={{ background: g.tint }}>{g.icon}</div>
               <div className="mt-3 font-bold">{g.title}</div>
               <div className="text-xs text-muted-foreground">{g.blurb}</div>
-              <div className="mt-2 text-xs font-semibold text-primary">Win → +{winCredits} credits</div>
+              <div className="mt-2 text-xs font-semibold text-primary">Win → 🏆 bragging rights</div>
             </button>
           ))}
         </div>
@@ -229,7 +228,7 @@ export default function GameArcade({
           {status !== "playing" && (
             <div className="mt-6 text-center">
               <div className="text-2xl font-black">
-                {status === "won" ? `🏆 You won! +${winCredits} credits` : `💀 Out of lives — ${correct}/${WIN_TARGET} correct`}
+                {status === "won" ? "🏆 You won!" : `💀 Out of lives — ${correct}/${WIN_TARGET} correct`}
               </div>
               <button onClick={() => startGame(game)} className="mt-4 rounded-full px-6 py-2 text-sm font-bold text-primary-foreground" style={{ background: "var(--gradient-fun)" }}>
                 Play again
