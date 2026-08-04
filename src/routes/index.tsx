@@ -9,11 +9,10 @@ import ProfileHub from "@/components/ProfileHub";
 import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
-import GameArcade from "@/components/GameArcade";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
-  MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
+  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS,
   type HistoryEntry,
 } from "@/lib/profiles";
 
@@ -64,9 +63,9 @@ const FEATURES: CardItem[] = [
   {
     icon: "🏅", title: "Rewards & Badges", desc: "Unlock achievements for every milestone.", tint: "oklch(0.95 0.05 85)",
     points: [
+      `Earn ${STREAK_BONUS_CREDITS} credits every time your streak grows.`,
       "Beat your best streak and keep the 🔥 alive.",
-      "Brain Arcade and Portal Racer wins earn badges — never credits.",
-      "Credits only come from your monthly refill or Focuser Pro.",
+      "Win extra credits by solving maths portals in Portal Racer.",
     ],
   },
   {
@@ -87,7 +86,7 @@ const AUDIENCES: CardItem[] = [
       "AI focus coach keeps you honest during study time.",
       "Homework helper explains anything at your grade level.",
       "Maths mini-games for a quick brain break between sessions.",
-      "Streaks and badges make studying feel like a game.",
+      "Streaks, credits and badges make studying feel like a game.",
     ],
   },
   {
@@ -131,6 +130,7 @@ function Index() {
     patchActive({
       streak: profile.streak + 1,
       bestStreak: Math.max(profile.bestStreak, profile.streak + 1),
+      credits: profile.credits + STREAK_BONUS_CREDITS,
     });
   }, [profile, patchActive]);
   const resetStreak = useCallback(() => { patchActive({ streak: 0 }); }, [patchActive]);
@@ -198,7 +198,7 @@ function Index() {
     if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
     if (!profile) { setAskError("Create a profile first so Foco knows who's asking."); return; }
     if (profile.consent && !profile.consent.ai) { setAskError("Turn on “AI tutor & summaries” in Profile settings to ask questions."); return; }
-    if (profile.credits < 1) { setAskError(`You're out of credits — subscribe to Focuser Pro for ${SUBSCRIPTION_PRICE}/month to get ${MONTHLY_PRO_CREDITS.toLocaleString()} credits.`); return; }
+    if (profile.credits < 1) { setAskError("You're out of credits — subscribe to Focuser Pro for 25 SAR/month to get 500,000 credits."); return; }
     setAskError(null);
     const nextHistory = [...chat, { role: "user" as const, content: q }];
     setChat(nextHistory);
@@ -873,14 +873,7 @@ function Index() {
 
       {/* Mini games */}
       <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
-        <div className="space-y-6">
-          <PortalDriveGame
-            age={Number(profile?.age) || 12}
-          />
-          <GameArcade
-            age={Number(profile?.age) || 12}
-          />
-        </div>
+        <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
       </section>
 
       <section id="features" className="mx-auto max-w-6xl px-6 pb-20">

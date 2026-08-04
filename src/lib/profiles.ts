@@ -43,9 +43,10 @@ export type HistoryEntry = {
 const STORE_KEY = "focuser.users";
 const LEGACY_KEY = "focuser.profile";
 
-export const MONTHLY_FREE_CREDITS = 250;
+export const MONTHLY_FREE_CREDITS = 200;
 export const MONTHLY_PRO_CREDITS = 500000;
-export const SUBSCRIPTION_PRICE = "$15";
+export const STREAK_BONUS_CREDITS = 45;
+export const SUBSCRIPTION_PRICE = "25 SAR";
 
 export const AVATARS = ["🦊", "🐨", "🐼", "🦉", "🐯", "🦄", "🐙", "🌟", "🐵", "🐸", "🦁", "🐧"];
 
