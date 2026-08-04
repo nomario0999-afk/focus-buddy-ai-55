@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CURRENCY, GAME_WIN_CREDITS } from "@/lib/profiles";
 
 type Op = "+" | "-" | "×";
 
@@ -45,6 +46,8 @@ export default function PortalDriveGame({
   const [question, setQuestion] = useState<Question | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [road, setRoad] = useState(0);
+  const [won, setWon] = useState(false);
+  const rewardedRef = useRef(false);
   const raf = useRef<number | null>(null);
   const laneRef = useRef(lane);
   laneRef.current = lane;
@@ -61,6 +64,7 @@ export default function PortalDriveGame({
 
   const start = () => {
     setPlaying(true); setLives(3); setScore(0); setLevel(1); setLane(1); setQuestion(null); setFeedback(null);
+    setWon(false);
     spawn();
   };
 
@@ -109,10 +113,20 @@ export default function PortalDriveGame({
   const answerQ = (opt: number) => {
     if (!question) return;
     if (opt === question.answer) {
-      setScore((s) => s + 10 * level);
-      setLevel((l) => Math.min(9, l + 1));
+      const nextScore = score + 10 * level;
+      setScore(nextScore);
+      const nextLevel = Math.min(9, level + 1);
+      setLevel(nextLevel);
       setFeedback("🎉 Correct! Portal opened.");
-      onReward?.(1);
+      if (nextLevel >= 6 && !rewardedRef.current) {
+        // Reward once per completed run — never per question.
+        rewardedRef.current = true;
+        setWon(true);
+        setPlaying(false);
+        setQuestion(null);
+        onReward?.(GAME_WIN_CREDITS);
+        return;
+      }
     } else {
       setLives((l) => Math.max(0, l - 1));
       setFeedback(`❌ It was ${question.answer}.`);
@@ -131,7 +145,7 @@ export default function PortalDriveGame({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">🎮 Portal Racer — brain break</h2>
           <p className="text-sm text-muted-foreground">
-            Drive into the blue portal, then solve the multiplication, addition or subtraction inside.
+            Drive into the blue portal and solve 5 maths portals to win. Finish the run → +{GAME_WIN_CREDITS} {CURRENCY} (once).
           </p>
         </div>
         <div className="flex gap-2 text-sm font-semibold">
@@ -195,10 +209,12 @@ export default function PortalDriveGame({
         {/* overlays */}
         {!playing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 text-center text-white">
-            <div className="text-2xl font-black">{lives === 0 ? `Game over — ${score} points` : "🏎️ Portal Racer"}</div>
+            <div className="text-2xl font-black">
+              {won ? `🏆 You won — ${score} points` : lives === 0 ? `Game over — ${score} points` : "🏎️ Portal Racer"}
+            </div>
             <p className="max-w-xs text-sm text-white/85">Use ← → keys or the buttons to steer into the blue portal and answer the maths question.</p>
             <button onClick={start} className="rounded-full bg-white px-6 py-2 text-sm font-bold text-primary hover:opacity-90">
-              {lives === 0 ? "Play again" : "Start driving"}
+              {lives === 0 || won ? "Play again" : "Start driving"}
             </button>
           </div>
         )}
