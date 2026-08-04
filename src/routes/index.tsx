@@ -13,7 +13,7 @@ import GameArcade from "@/components/GameArcade";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
-  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS, GAME_WIN_CREDITS, SUBSCRIPTION_PRICE,
+  MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
   type HistoryEntry,
 } from "@/lib/profiles";
 
@@ -64,9 +64,9 @@ const FEATURES: CardItem[] = [
   {
     icon: "🏅", title: "Rewards & Badges", desc: "Unlock achievements for every milestone.", tint: "oklch(0.95 0.05 85)",
     points: [
-      `Earn ${STREAK_BONUS_CREDITS} credits every time your streak grows.`,
       "Beat your best streak and keep the 🔥 alive.",
-      `Win ${GAME_WIN_CREDITS} credits every time you beat a Brain Arcade or Portal Racer game.`,
+      "Brain Arcade and Portal Racer wins earn badges — never credits.",
+      "Credits only come from your monthly refill or Focuser Pro.",
     ],
   },
   {
@@ -87,7 +87,7 @@ const AUDIENCES: CardItem[] = [
       "AI focus coach keeps you honest during study time.",
       "Homework helper explains anything at your grade level.",
       "Maths mini-games for a quick brain break between sessions.",
-      "Streaks, credits and badges make studying feel like a game.",
+      "Streaks and badges make studying feel like a game.",
     ],
   },
   {
@@ -131,7 +131,6 @@ function Index() {
     patchActive({
       streak: profile.streak + 1,
       bestStreak: Math.max(profile.bestStreak, profile.streak + 1),
-      credits: profile.credits + STREAK_BONUS_CREDITS,
     });
   }, [profile, patchActive]);
   const resetStreak = useCallback(() => { patchActive({ streak: 0 }); }, [patchActive]);
@@ -877,13 +876,9 @@ function Index() {
         <div className="space-y-6">
           <PortalDriveGame
             age={Number(profile?.age) || 12}
-            winCredits={GAME_WIN_CREDITS}
-            onWin={() => addCredits(GAME_WIN_CREDITS)}
           />
           <GameArcade
             age={Number(profile?.age) || 12}
-            winCredits={GAME_WIN_CREDITS}
-            onWin={() => addCredits(GAME_WIN_CREDITS)}
           />
         </div>
       </section>
