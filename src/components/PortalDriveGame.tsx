@@ -32,11 +32,10 @@ function makeQuestion(age: number, level: number): Question {
 const WIN_TARGET = 6; // correct portal answers needed to win the run
 
 export default function PortalDriveGame({
-  age = 12, onWin, winCredits = 70,
+  age = 12, onWin,
 }: {
   age?: number;
   onWin?: () => void;
-  winCredits?: number;
 }) {
   const [playing, setPlaying] = useState(false);
   const [lane, setLane] = useState(1);
@@ -151,7 +150,7 @@ export default function PortalDriveGame({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">🎮 Portal Racer — brain break</h2>
           <p className="text-sm text-muted-foreground">
-            Drive into the blue portal and solve {WIN_TARGET} maths challenges to win {winCredits} credits.
+            Drive into the blue portal and solve {WIN_TARGET} maths challenges to win the run. No credits — just a brain break.
           </p>
         </div>
         <div className="flex gap-2 text-sm font-semibold">
@@ -217,10 +216,10 @@ export default function PortalDriveGame({
         {!playing && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 text-center text-white">
             <div className="text-2xl font-black">
-              {won ? `🏆 You won! +${winCredits} credits` : lives === 0 ? `Game over — ${score} points` : "🏎️ Portal Racer"}
+              {won ? "🏆 You won the run!" : lives === 0 ? `Game over — ${score} points` : "🏎️ Portal Racer"}
             </div>
             <p className="max-w-xs text-sm text-white/85">
-              Use ← → keys or the buttons to steer into the blue portal and answer the maths question. Credits are only paid out when you win a full run.
+              Use ← → keys or the buttons to steer into the blue portal and answer the maths question. Games never award credits.
             </p>
             <button onClick={start} className="rounded-full bg-white px-6 py-2 text-sm font-bold text-primary hover:opacity-90">
               {lives === 0 || won ? "Play again" : "Start driving"}
