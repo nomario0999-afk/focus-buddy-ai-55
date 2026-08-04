@@ -1,5 +1,5 @@
 import {
-  MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, STREAK_BONUS_CREDITS, SUBSCRIPTION_PRICE,
+  MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
   type Profile,
 } from "@/lib/profiles";
 
@@ -16,7 +16,7 @@ export default function CreditsPanel({
         <div>
           <h2 className="text-2xl font-bold tracking-tight">🪙 Your credits</h2>
           <p className="text-sm text-muted-foreground">
-            1 credit per question to Foco · {STREAK_BONUS_CREDITS} bonus credits for every streak you earn.
+            1 credit per question to Foco · credits can't be earned by playing — they refill monthly or with Pro.
           </p>
         </div>
         <div className="text-right">
@@ -37,12 +37,12 @@ export default function CreditsPanel({
           </div>
         </div>
         <div className="rounded-2xl bg-muted/50 p-3 text-sm">
-          <div className="font-bold">🔥 Streak bonus</div>
-          <div className="text-xs text-muted-foreground">+{STREAK_BONUS_CREDITS} credits each time your streak grows (best: {profile.bestStreak}).</div>
+          <div className="font-bold">🔥 Streak</div>
+          <div className="text-xs text-muted-foreground">Streaks are for bragging rights only — no credits (best: {profile.bestStreak}).</div>
         </div>
         <div className="rounded-2xl bg-muted/50 p-3 text-sm">
           <div className="font-bold">❓ Questions</div>
-          <div className="text-xs text-muted-foreground">−1 credit per question to the AI tutor.</div>
+          <div className="text-xs text-muted-foreground">−1 credit per question. At 0 credits, ask again with Pro.</div>
         </div>
       </div>
 
