@@ -10,6 +10,7 @@ import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
+import FunGames3D from "@/components/FunGames3D";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
@@ -196,10 +197,11 @@ function Index() {
   const handleAsk = useCallback(async () => {
     const q = question.trim();
     if (!q || askLoading) return;
-    if (!grade.trim()) { setAskError("Please enter your grade first so Foco can tailor the answer."); return; }
-    if (!profile) { setAskError("Create a profile first so Foco knows who's asking."); return; }
-    if (profile.consent && !profile.consent.ai) { setAskError("Turn on “AI tutor & summaries” in Profile settings to ask questions."); return; }
-    if (profile.credits < 1) { setAskError("You're out of Focolara — subscribe to Focuser Pro for $15/month to get 500,000 Focolara."); return; }
+    // The tutor is only ever blocked by one thing: running out of Focolara.
+    if (profile && profile.credits < 1) {
+      setAskError("You're out of Focolara — subscribe to Focuser Pro for $15/month to get 500,000 Focolara.");
+      return;
+    }
     setAskError(null);
     const nextHistory = [...chat, { role: "user" as const, content: q }];
     setChat(nextHistory);
@@ -208,7 +210,7 @@ function Index() {
     try {
       const res = await runAsk({ data: { subject, grade, history: chat, question: q } });
       setChat([...nextHistory, { role: "assistant", content: res.answer }]);
-      addCredits(-1);
+      if (profile) addCredits(-1);
     } catch (e) {
       setAskError(e instanceof Error ? e.message : "Something went wrong.");
       setChat(chat); // rollback the user message so they can retry
@@ -734,7 +736,7 @@ function Index() {
 
           <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grade / Level *</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grade / Level</span>
               <input
                 type="text"
                 value={grade}
@@ -795,10 +797,22 @@ function Index() {
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value.slice(0, 2000))}
-                placeholder={grade ? "Ask Foco a question…" : "Enter your grade above first"}
+                placeholder="Ask Foco a question…"
                 disabled={askLoading}
                 className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm outline-none focus:border-primary disabled:opacity-60"
               />
+              <button
+                type="button"
+                onClick={toggleMic}
+                title={micSupported ? "Speak your question" : "Voice input isn't supported in this browser"}
+                disabled={!micSupported || askLoading}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
+                  listening ? "border-transparent text-primary-foreground" : "border-border hover:bg-muted"
+                }`}
+                style={listening ? { background: "var(--gradient-fun)" } : undefined}
+              >
+                {listening ? "● Listening" : "🎤"}
+              </button>
               <button
                 type="submit"
                 disabled={askLoading || !question.trim()}
@@ -877,6 +891,7 @@ function Index() {
         <div className="space-y-6">
           <GameArcade onWin={(c) => addCredits(c)} />
           <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
+          <FunGames3D unlocked={streak > 0 || history.length > 0} streak={streak} onWin={(c) => addCredits(c)} />
         </div>
       </section>
 
