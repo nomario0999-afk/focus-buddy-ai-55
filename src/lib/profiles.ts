@@ -48,7 +48,7 @@ export const MONTHLY_FREE_CREDITS = 250;
 export const MONTHLY_PRO_CREDITS = 500000;
 export const STREAK_BONUS_CREDITS = 70;
 /** Awarded once per game won — never per question. */
-export const GAME_WIN_CREDITS = 70;
+export const GAME_WIN_CREDITS = 10;
 export const SUBSCRIPTION_PRICE = "$15";
 
 export const AVATARS = ["🦊", "🐨", "🐼", "🦉", "🐯", "🦄", "🐙", "🌟", "🐵", "🐸", "🦁", "🐧"];
