@@ -183,6 +183,44 @@ function Index() {
   const [askLoading, setAskLoading] = useState(false);
   const [askError, setAskError] = useState<string | null>(null);
 
+  // Voice input (Web Speech API)
+  const [listening, setListening] = useState(false);
+  const [micSupported, setMicSupported] = useState(false);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  useEffect(() => {
+    const w = window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) return;
+    setMicSupported(true);
+    const rec = new Ctor() as unknown as {
+      lang: string; interimResults: boolean; continuous: boolean;
+      start: () => void; stop: () => void;
+      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+      onend: (() => void) | null;
+      onerror: (() => void) | null;
+    };
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.continuous = false;
+    rec.onresult = (e) => {
+      let text = "";
+      for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+      setQuestion((prev) => (prev ? `${prev} ${text.trim()}` : text.trim()).slice(0, 2000));
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recognitionRef.current = rec;
+    return () => { try { rec.stop(); } catch { /* ignore */ } };
+  }, []);
+
+  const toggleMic = useCallback(() => {
+    const rec = recognitionRef.current;
+    if (!rec) return;
+    if (listening) { try { rec.stop(); } catch { /* ignore */ } setListening(false); return; }
+    try { rec.start(); setListening(true); } catch { setListening(false); }
+  }, [listening]);
+
   useEffect(() => {
     try {
       const g = localStorage.getItem("focuser.grade") ?? "";
