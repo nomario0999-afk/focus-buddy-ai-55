@@ -30,6 +30,8 @@ function makeQuestion(age: number, level: number): Question {
   };
 }
 
+import { LockHeaderBar } from "@/components/GameLockUI";
+
 export default function PortalDriveGame({
   age = 12, onReward, lock,
 }: {
