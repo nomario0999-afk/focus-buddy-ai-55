@@ -604,13 +604,18 @@ function Index() {
           {profile && (
             <CreditsPanel
               profile={profile}
-              onSubscribe={() =>
-                patchActive(
-                  profile.subscribed
-                    ? { subscribed: false }
-                    : { subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS },
-                )
-              }
+              onSubscribe={() => {
+                if (profile.subscribed) {
+                  // Cancelling is final: no money refund and no Focolara refund.
+                  const ok = confirm(
+                    "Cancel Focuser Pro?\n\nNo refunds: you will not get your money back, and the Focolara you already received will not be refunded or returned.\n\nYou keep any Focolara left in your balance, but next month you go back to the free 250 Focolara.",
+                  );
+                  if (!ok) return;
+                  patchActive({ subscribed: false });
+                  return;
+                }
+                patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS });
+              }}
             />
           )}
         </div>
