@@ -11,6 +11,7 @@ import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
 import FunGames3D from "@/components/FunGames3D";
+import GkChallenges from "@/components/GkChallenges";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
@@ -927,6 +928,7 @@ function Index() {
       {/* Mini games */}
       <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
         <div className="space-y-6">
+          <GkChallenges onWin={(c) => addCredits(c)} />
           <GameArcade onWin={(c) => addCredits(c)} />
           <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
           <FunGames3D unlocked={streak > 0 || history.length > 0} streak={streak} onWin={(c) => addCredits(c)} />
