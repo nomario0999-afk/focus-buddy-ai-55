@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { CURRENCY, GAME_WIN_CREDITS } from "@/lib/profiles";
+import type { GameLock } from "@/lib/game-unlocks";
+import { LockHeaderBar, LockTag } from "@/components/GameLockUI";
 
 type Q = { q: string; options: string[]; answer: number };
 type Challenge = { id: string; title: string; emoji: string; blurb: string; questions: Q[] };
@@ -85,17 +87,23 @@ const CHALLENGES: Challenge[] = [
   },
 ];
 
-export default function GkChallenges({ onWin }: { onWin?: (credits: number) => void }) {
+export default function GkChallenges({ onWin, lock }: { onWin?: (credits: number) => void; lock?: GameLock }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
   const [rewarded, setRewarded] = useState<string[]>([]);
+  const [lockMsg, setLockMsg] = useState<string | null>(null);
 
   const challenge = useMemo(() => CHALLENGES.find((c) => c.id === openId) ?? null, [openId]);
 
   const start = (id: string) => {
+    if (lock && !lock.isUnlocked(id)) {
+      const err = lock.unlock(id);
+      if (err) { setLockMsg(err); return; }
+    }
+    setLockMsg(null);
     setOpenId(id); setIndex(0); setPicked(null); setScore(0); setDone(false);
   };
 
@@ -137,6 +145,9 @@ export default function GkChallenges({ onWin }: { onWin?: (credits: number) => v
         )}
       </div>
 
+      {lock && <LockHeaderBar lock={lock} />}
+      {lockMsg && <p className="mt-2 text-sm font-semibold text-destructive">{lockMsg}</p>}
+
       {!challenge && (
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {CHALLENGES.map((c) => (
@@ -146,7 +157,9 @@ export default function GkChallenges({ onWin }: { onWin?: (credits: number) => v
               <div className="mt-2 text-sm font-bold">{c.title}</div>
               <div className="text-xs text-muted-foreground">{c.blurb}</div>
               <div className="mt-2 text-xs font-semibold text-primary">
-                {rewarded.includes(c.id) ? "✅ Completed" : `5 questions · +${GAME_WIN_CREDITS} ${CURRENCY}`}
+                {lock
+                  ? <LockTag lock={lock} id={c.id} wonLabel={rewarded.includes(c.id) ? "✅ Completed" : `5 questions · +${GAME_WIN_CREDITS} ${CURRENCY}`} />
+                  : (rewarded.includes(c.id) ? "✅ Completed" : `5 questions · +${GAME_WIN_CREDITS} ${CURRENCY}`)}
               </div>
             </button>
           ))}

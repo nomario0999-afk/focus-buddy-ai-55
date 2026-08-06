@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { CURRENCY, GAME_WIN_CREDITS } from "@/lib/profiles";
+import type { GameLock } from "@/lib/game-unlocks";
+import { LockHeaderBar, LockTag } from "@/components/GameLockUI";
 
 type Q = { text: string; answer: string; options: string[] };
 
@@ -120,7 +122,7 @@ export const GAMES: ArcadeGame[] = [
 const ROUNDS = 5;
 const LIVES = 3;
 
-export default function GameArcade({ onWin }: { onWin?: (credits: number) => void }) {
+export default function GameArcade({ onWin, lock }: { onWin?: (credits: number) => void; lock?: GameLock }) {
   const [gameId, setGameId] = useState<string | null>(null);
   const [q, setQ] = useState<Q | null>(null);
   const [correct, setCorrect] = useState(0);
@@ -128,6 +130,7 @@ export default function GameArcade({ onWin }: { onWin?: (credits: number) => voi
   const [status, setStatus] = useState<"idle" | "playing" | "won" | "lost">("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [wonIds, setWonIds] = useState<string[]>([]);
+  const [lockMsg, setLockMsg] = useState<string | null>(null);
 
   const game = useMemo(() => GAMES.find((g) => g.id === gameId) ?? null, [gameId]);
 
@@ -135,6 +138,15 @@ export default function GameArcade({ onWin }: { onWin?: (credits: number) => voi
     setGameId(g.id); setCorrect(0); setLives(LIVES); setStatus("playing"); setFeedback(null);
     setQ(g.make(1));
   }, []);
+
+  const tryStart = useCallback((g: ArcadeGame) => {
+    if (lock && !lock.isUnlocked(g.id)) {
+      const err = lock.unlock(g.id);
+      if (err) { setLockMsg(err); return; }
+    }
+    setLockMsg(null);
+    start(g);
+  }, [lock, start]);
 
   const answer = useCallback((opt: string) => {
     if (!game || !q || status !== "playing") return;
@@ -176,19 +188,24 @@ export default function GameArcade({ onWin }: { onWin?: (credits: number) => voi
         <span className="rounded-full bg-muted px-3 py-1 text-sm font-semibold">🏆 {wonIds.length}/{GAMES.length} won</span>
       </div>
 
+      {lock && <LockHeaderBar lock={lock} />}
+      {lockMsg && <p className="mt-2 text-sm font-semibold text-destructive">{lockMsg}</p>}
+
       {!game && (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {GAMES.map((g) => (
             <button
               key={g.id}
-              onClick={() => start(g)}
+              onClick={() => tryStart(g)}
               className="rounded-2xl border border-border p-4 text-left transition hover:-translate-y-1 hover:border-primary"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl text-xl" style={{ background: g.tint }}>{g.icon}</div>
               <div className="mt-3 text-sm font-bold">{g.title}</div>
               <div className="text-xs text-muted-foreground">{g.desc}</div>
               <div className="mt-2 text-xs font-semibold text-primary">
-                {wonIds.includes(g.id) ? "✅ Won — play for fun" : `Win → +${GAME_WIN_CREDITS}`}
+                {lock
+                  ? <LockTag lock={lock} id={g.id} wonLabel={wonIds.includes(g.id) ? "✅ Won — play for fun" : `Win → +${GAME_WIN_CREDITS}`} />
+                  : (wonIds.includes(g.id) ? "✅ Won — play for fun" : `Win → +${GAME_WIN_CREDITS}`)}
               </div>
             </button>
           ))}

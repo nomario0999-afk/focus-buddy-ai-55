@@ -12,6 +12,7 @@ import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
 import FunGames3D from "@/components/FunGames3D";
 import GkChallenges from "@/components/GkChallenges";
+import { useGameUnlocks } from "@/lib/game-unlocks";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
@@ -136,11 +137,14 @@ function Index() {
       credits: profile.credits + STREAK_BONUS_CREDITS,
     });
   }, [profile, patchActive]);
+
   const resetStreak = useCallback(() => { patchActive({ streak: 0 }); }, [patchActive]);
   const addCredits = useCallback((n: number) => {
     if (!profile) return;
     patchActive({ credits: Math.max(0, profile.credits + n) });
   }, [profile, patchActive]);
+
+  const gameLock = useGameUnlocks(profile?.id ?? null, streak, credits, addCredits);
 
   // Apply the age-based (or chosen) theme to the document
   useEffect(() => {
@@ -933,10 +937,10 @@ function Index() {
       {/* Mini games */}
       <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
         <div className="space-y-6">
-          <GkChallenges onWin={(c) => addCredits(c)} />
-          <GameArcade onWin={(c) => addCredits(c)} />
-          <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} />
-          <FunGames3D unlocked={streak > 0 || history.length > 0} streak={streak} onWin={(c) => addCredits(c)} />
+          <GkChallenges onWin={(c) => addCredits(c)} lock={gameLock} />
+          <GameArcade onWin={(c) => addCredits(c)} lock={gameLock} />
+          <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} lock={gameLock} />
+          <FunGames3D unlocked={streak > 0 || history.length > 0} streak={streak} onWin={(c) => addCredits(c)} lock={gameLock} />
         </div>
       </section>
 

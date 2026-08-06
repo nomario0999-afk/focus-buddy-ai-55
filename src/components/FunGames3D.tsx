@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CURRENCY, GAME_WIN_CREDITS } from "@/lib/profiles";
+import type { GameLock } from "@/lib/game-unlocks";
+import { LockHeaderBar, LockTag } from "@/components/GameLockUI";
 
 type GameId = "dodger" | "reflex" | "catcher";
 
@@ -262,10 +264,20 @@ function Catcher({ onWin }: { onWin: () => void }) {
 }
 
 export default function FunGames3D({
-  unlocked, streak, onWin,
-}: { unlocked: boolean; streak: number; onWin?: (credits: number) => void }) {
+  unlocked, streak, onWin, lock,
+}: { unlocked: boolean; streak: number; onWin?: (credits: number) => void; lock?: GameLock }) {
   const [active, setActive] = useState<GameId | null>(null);
   const [wonIds, setWonIds] = useState<GameId[]>([]);
+  const [lockMsg, setLockMsg] = useState<string | null>(null);
+
+  const open = useCallback((id: GameId) => {
+    if (lock && !lock.isUnlocked(id)) {
+      const err = lock.unlock(id);
+      if (err) { setLockMsg(err); return; }
+    }
+    setLockMsg(null);
+    setActive(id);
+  }, [lock]);
 
   const win = useCallback((id: GameId) => {
     setWonIds((prev) => {
@@ -289,6 +301,9 @@ export default function FunGames3D({
         <span className="rounded-full bg-muted px-3 py-1 text-sm font-semibold">🔥 streak {streak}</span>
       </div>
 
+      {lock && <LockHeaderBar lock={lock} />}
+      {lockMsg && <p className="mt-2 text-sm font-semibold text-destructive">{lockMsg}</p>}
+
       {!unlocked ? (
         <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center">
           <div className="text-3xl">🔒</div>
@@ -300,14 +315,16 @@ export default function FunGames3D({
           {GAMES.map((g) => (
             <button
               key={g.id}
-              onClick={() => setActive(g.id)}
+              onClick={() => open(g.id)}
               className="rounded-2xl border border-border p-4 text-left transition hover:-translate-y-1 hover:border-primary"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl text-xl" style={{ background: g.tint }}>{g.icon}</div>
               <div className="mt-3 text-sm font-bold">{g.title}</div>
               <div className="text-xs text-muted-foreground">{g.desc}</div>
               <div className="mt-2 text-xs font-semibold text-primary">
-                {wonIds.includes(g.id) ? "✅ Won — play for fun" : `Win → +${GAME_WIN_CREDITS}`}
+                {lock
+                  ? <LockTag lock={lock} id={g.id} wonLabel={wonIds.includes(g.id) ? "✅ Won — play for fun" : `Win → +${GAME_WIN_CREDITS}`} />
+                  : (wonIds.includes(g.id) ? "✅ Won — play for fun" : `Win → +${GAME_WIN_CREDITS}`)}
               </div>
             </button>
           ))}
