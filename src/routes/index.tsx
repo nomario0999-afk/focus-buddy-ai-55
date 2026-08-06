@@ -138,12 +138,13 @@ function Index() {
     });
   }, [profile, patchActive]);
 
-  const gameLock = useGameUnlocks(profile?.id ?? null, streak, credits, addCredits);
   const resetStreak = useCallback(() => { patchActive({ streak: 0 }); }, [patchActive]);
   const addCredits = useCallback((n: number) => {
     if (!profile) return;
     patchActive({ credits: Math.max(0, profile.credits + n) });
   }, [profile, patchActive]);
+
+  const gameLock = useGameUnlocks(profile?.id ?? null, streak, credits, addCredits);
 
   // Apply the age-based (or chosen) theme to the document
   useEffect(() => {
