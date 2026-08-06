@@ -50,6 +50,9 @@ export default function CreditsPanel({
         <div className="mt-4 rounded-2xl border border-border p-4 text-sm">
           <span className="font-bold">✅ Focuser Pro active</span> — {MONTHLY_PRO_CREDITS.toLocaleString()} {CURRENCY} per month.
           <button onClick={onSubscribe} className="ml-3 text-xs font-semibold text-muted-foreground underline">Cancel</button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            No refunds on cancel: your payment is not returned and {CURRENCY} already given is never refunded or taken back.
+          </p>
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-[2px]" style={{ background: "var(--gradient-fun)" }}>
@@ -63,6 +66,9 @@ export default function CreditsPanel({
             <button onClick={onSubscribe} className="rounded-full px-5 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)] hover:opacity-90" style={{ background: "var(--gradient-fun)" }}>
               Subscribe for {SUBSCRIPTION_PRICE}
             </button>
+            <p className="w-full text-xs text-muted-foreground">
+              Billed monthly. If you cancel, there is no money refund and no {CURRENCY} refund.
+            </p>
           </div>
         </div>
       )}
