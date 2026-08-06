@@ -31,10 +31,11 @@ function makeQuestion(age: number, level: number): Question {
 }
 
 export default function PortalDriveGame({
-  age = 12, onReward,
+  age = 12, onReward, lock,
 }: {
   age?: number;
   onReward?: (credits: number) => void;
+  lock?: import("@/lib/game-unlocks").GameLock;
 }) {
   const [playing, setPlaying] = useState(false);
   const [lane, setLane] = useState(1);
@@ -47,6 +48,7 @@ export default function PortalDriveGame({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [road, setRoad] = useState(0);
   const [won, setWon] = useState(false);
+  const [lockMsg, setLockMsg] = useState<string | null>(null);
   const rewardedRef = useRef(false);
   const raf = useRef<number | null>(null);
   const laneRef = useRef(lane);
@@ -63,6 +65,11 @@ export default function PortalDriveGame({
   }, []);
 
   const start = () => {
+    if (lock && !lock.isUnlocked("portal-racer")) {
+      const err = lock.unlock("portal-racer");
+      if (err) { setLockMsg(err); return; }
+    }
+    setLockMsg(null);
     setPlaying(true); setLives(3); setScore(0); setLevel(1); setLane(1); setQuestion(null); setFeedback(null);
     setWon(false);
     spawn();
@@ -155,6 +162,9 @@ export default function PortalDriveGame({
         </div>
       </div>
 
+      {lock && <LockHeaderBar lock={lock} />}
+      {lockMsg && <p className="mt-2 text-sm font-semibold text-destructive">{lockMsg}</p>}
+
       {/* 3D road */}
       <div
         className="relative mt-5 h-72 w-full overflow-hidden rounded-2xl md:h-96"
@@ -214,7 +224,9 @@ export default function PortalDriveGame({
             </div>
             <p className="max-w-xs text-sm text-white/85">Use ← → keys or the buttons to steer into the blue portal and answer the maths question.</p>
             <button onClick={start} className="rounded-full bg-white px-6 py-2 text-sm font-bold text-primary hover:opacity-90">
-              {lives === 0 || won ? "Play again" : "Start driving"}
+              {lock && !lock.isUnlocked("portal-racer")
+                ? `🔒 Unlock · ${lock.cost} Focolara`
+                : lives === 0 || won ? "Play again" : "Start driving"}
             </button>
           </div>
         )}
