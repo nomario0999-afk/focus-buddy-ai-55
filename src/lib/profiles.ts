@@ -191,3 +191,19 @@ export function useProfiles() {
 
   return { profiles, active, activeId, ready, setActiveId, addProfile, updateProfile, patchActive, removeProfile };
 }
+
+/* ── Passwords ──────────────────────────────────────────────────────────
+   Passwords never leave this device. We store only a salted SHA-256 hash,
+   so nobody (not even us) can read the password back out of storage. */
+
+export async function hashPassword(password: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(`focuser:${salt}:${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function verifyPassword(p: Profile, password: string): Promise<boolean> {
+  if (!p.passwordHash) return true;
+  const h = await hashPassword(password, p.id);
+  return h === p.passwordHash;
+}
