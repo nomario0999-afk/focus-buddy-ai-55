@@ -10,13 +10,14 @@ import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
-import FunGames3D from "@/components/FunGames3D";
 import GkChallenges from "@/components/GkChallenges";
+import SubscribeRequest from "@/components/SubscribeRequest";
+import { PRO_PRICE } from "@/lib/billing";
 import { useGameUnlocks } from "@/lib/game-unlocks";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
-  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS,
+  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS, hashPassword,
   type HistoryEntry,
 } from "@/lib/profiles";
 
@@ -179,6 +180,8 @@ function Index() {
   const checksRef = useRef(0);
   const distractionsRef = useRef(0);
   const summarizedRef = useRef(false);
+  const framesRef = useRef<string[]>([]);
+  const [recordEnabled, setRecordEnabled] = useState(false);
 
   // Study context + tutor chat
   const [grade, setGrade] = useState("");
@@ -423,6 +426,7 @@ function Index() {
     const img = captureFrame();
     if (!img) return;
     setIsChecking(true);
+    if (recordEnabled) framesRef.current = [...framesRef.current, img].slice(-6);
     try {
       const result = await runCheck({ data: { imageDataUrl: img } });
       setLastCheck({ focused: result.focused, reason: result.reason, at: Date.now() });
@@ -455,7 +459,7 @@ function Index() {
     } finally {
       setIsChecking(false);
     }
-  }, [captureFrame, runCheck, isChecking, beep, speak, mode, resetStreak]);
+  }, [captureFrame, runCheck, isChecking, beep, speak, mode, resetStreak, recordEnabled]);
 
   // Interval: run check every 20s while focused session is running and cam on
   useEffect(() => {
@@ -501,10 +505,12 @@ function Index() {
       focusScore: result.focusScore,
       tip: result.tip,
       distractions,
+      frames: recordEnabled ? framesRef.current.slice(-4) : undefined,
     });
     checksRef.current = 0;
     distractionsRef.current = 0;
-  }, [chat, subject, grade, streak, runSummarize, saveHistory]);
+    framesRef.current = [];
+  }, [chat, subject, grade, streak, runSummarize, saveHistory, recordEnabled]);
 
   useEffect(() => {
     if (mode !== "focus") return;
@@ -541,6 +547,8 @@ function Index() {
           <a href="#timer" className="hover:text-foreground">Timer</a>
           <a href="#games" className="hover:text-foreground">Games</a>
           <a href="#account" className="hover:text-foreground">Account</a>
+          <a href="#safety" className="hover:text-foreground">Safety</a>
+          <a href="/proctor" className="hover:text-foreground">Exam Mode</a>
         </nav>
         <a
           href="#account"
@@ -584,12 +592,16 @@ function Index() {
             className="absolute inset-0 -z-10 rounded-full opacity-60 blur-3xl"
             style={{ background: "var(--gradient-hero)" }}
           />
+          <div className="absolute -top-2 right-2 z-10 max-w-[200px] animate-[foco-pop_3s_ease-in-out_infinite] rounded-2xl border border-border bg-card px-4 py-2 text-sm font-bold shadow-[var(--shadow-soft)]">
+            Let's learn something new! ✨
+            <span className="absolute -bottom-1 left-6 h-3 w-3 rotate-45 border-b border-r border-border bg-card" />
+          </div>
           <img
             src={focoMascot}
             alt="Foco, the Focuser AI study mascot"
             width={520}
             height={520}
-            className="w-72 drop-shadow-[0_20px_40px_oklch(0.62_0.19_250/0.25)] md:w-96"
+            className="w-72 animate-[foco-float_3.2s_ease-in-out_infinite] drop-shadow-[0_20px_40px_oklch(0.62_0.19_250/0.25)] md:w-96"
           />
         </div>
       </section>
@@ -601,7 +613,11 @@ function Index() {
             profiles={profiles}
             active={profile}
             onSwitch={setActiveId}
-            onCreate={(v) => addProfile(v as never)}
+            onCreate={(v) => {
+              const created = addProfile(v as never);
+              const pw = (v as { password?: string }).password;
+              if (pw) void hashPassword(pw, created.id).then((h) => updateProfile(created.id, { passwordHash: h }));
+            }}
             onUpdate={updateProfile}
             onDelete={removeProfile}
           />
@@ -618,9 +634,20 @@ function Index() {
                   patchActive({ subscribed: false });
                   return;
                 }
-                patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS });
+                document.getElementById("subscribe-request")?.scrollIntoView({ behavior: "smooth" });
               }}
             />
+          )}
+          {profile && !profile.subscribed && (
+            <div id="subscribe-request">
+              <SubscribeRequest
+                plan="pro"
+                price={PRO_PRICE}
+                title="Want Focuser Pro? Message us first 💬"
+                blurb="No live chat — send this short message. You get our payment number, pay by number, and we send you an activation code."
+                onActivated={() => patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS })}
+              />
+            </div>
           )}
         </div>
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-10">
@@ -738,6 +765,14 @@ function Index() {
                           onChange={(e) => setMonitoring(e.target.checked)}
                         />
                         AI monitoring
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={recordEnabled}
+                          onChange={(e) => setRecordEnabled(e.target.checked)}
+                        />
+                        Record session snapshots
                       </label>
                       <button
                         onClick={stopCam}
@@ -927,6 +962,16 @@ function Index() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {h.distractions === 0 ? "No distractions detected" : `${h.distractions} distraction${h.distractions > 1 ? "s" : ""} detected`}
                   </p>
+                  {h.frames && h.frames.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex flex-wrap gap-2">
+                        {h.frames.map((f, i) => (
+                          <img key={i} src={f} alt={`Session snapshot ${i + 1}`} className="h-16 w-24 rounded-lg border border-border object-cover" />
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">🔒 Recording saved on this device only. Never uploaded.</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -940,7 +985,6 @@ function Index() {
           <GkChallenges onWin={(c) => addCredits(c)} lock={gameLock} />
           <GameArcade onWin={(c) => addCredits(c)} lock={gameLock} />
           <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} lock={gameLock} />
-          <FunGames3D unlocked={streak > 0 || history.length > 0} streak={streak} onWin={(c) => addCredits(c)} lock={gameLock} />
         </div>
       </section>
 
@@ -982,10 +1026,39 @@ function Index() {
         </div>
       </section>
 
+      {/* Safety */}
+      <section id="safety" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
+          <h2 className="text-2xl font-bold tracking-tight">🛡️ Is Focuser safe? Yes — here is exactly why</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Focuser is built to be risk-free for children, students and families. Nothing about you is sold, shared or made public.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {[
+              ["🔐 Password protected", "Every account has its own password. It is scrambled with SHA-256 on your device — the real password is never stored or sent anywhere."],
+              ["📵 No accounts on the internet", "There is no server database of users. Your profile, streaks, Focolara and history live only in this browser."],
+              ["🎥 Camera stays with you", "Session snapshots are optional, saved on this device only, and you can delete them any time with one tap."],
+              ["🤖 AI sees only what it needs", "A focus check sends one small frame to the AI to answer 'focused or not', then it is discarded. Nothing is kept."],
+              ["🙅 No ads, no tracking, no selling", "No advertising pixels, no analytics profiling, no data brokers. Ever."],
+              ["🧹 One-tap delete", "Clear your history, turn off the camera, or delete the whole profile whenever you want — it is gone immediately."],
+            ].map(([t, d]) => (
+              <div key={t} className="rounded-2xl border border-border bg-background p-4">
+                <div className="text-sm font-bold">{t}</div>
+                <p className="mt-1 text-sm text-muted-foreground">{d}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Children should always ask a parent before turning the camera on. Parents can review every saved session in Progress history.
+          </p>
+        </div>
+      </section>
+
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-6 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} Focuser</span>
           <span>Focus. Learn. Grow.</span>
+          <a href="/owner" className="text-xs text-muted-foreground/60 hover:text-foreground">·</a>
         </div>
         <div className="px-6 pb-8 text-center">
           <p

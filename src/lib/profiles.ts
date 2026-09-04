@@ -26,6 +26,8 @@ export type Profile = {
   bestStreak: number;
   theme: ThemeKey;
   consent: Consent | null;
+  /** Salted SHA-256 hash of the account password (never the password itself). */
+  passwordHash?: string;
 };
 
 export type HistoryEntry = {
@@ -38,6 +40,8 @@ export type HistoryEntry = {
   focusScore: number;
   tip: string;
   distractions: number;
+  /** Optional private webcam snapshots recorded during the session (this device only). */
+  frames?: string[];
 };
 
 const STORE_KEY = "focuser.users";
@@ -120,6 +124,7 @@ export function normalize(p: Profile): Profile {
     bestStreak: p.bestStreak ?? p.streak ?? 0,
     theme: p.theme ?? "auto",
     consent: p.consent ?? null,
+    passwordHash: p.passwordHash,
   };
 }
 
@@ -190,4 +195,20 @@ export function useProfiles() {
   }, []);
 
   return { profiles, active, activeId, ready, setActiveId, addProfile, updateProfile, patchActive, removeProfile };
+}
+
+/* ── Passwords ──────────────────────────────────────────────────────────
+   Passwords never leave this device. We store only a salted SHA-256 hash,
+   so nobody (not even us) can read the password back out of storage. */
+
+export async function hashPassword(password: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(`focuser:${salt}:${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function verifyPassword(p: Profile, password: string): Promise<boolean> {
+  if (!p.passwordHash) return true;
+  const h = await hashPassword(password, p.id);
+  return h === p.passwordHash;
 }
