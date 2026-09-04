@@ -26,6 +26,8 @@ export type Profile = {
   bestStreak: number;
   theme: ThemeKey;
   consent: Consent | null;
+  /** Salted SHA-256 hash of the account password (never the password itself). */
+  passwordHash?: string;
 };
 
 export type HistoryEntry = {
@@ -38,6 +40,8 @@ export type HistoryEntry = {
   focusScore: number;
   tip: string;
   distractions: number;
+  /** Optional private webcam snapshots recorded during the session (this device only). */
+  frames?: string[];
 };
 
 const STORE_KEY = "focuser.users";
@@ -120,6 +124,7 @@ export function normalize(p: Profile): Profile {
     bestStreak: p.bestStreak ?? p.streak ?? 0,
     theme: p.theme ?? "auto",
     consent: p.consent ?? null,
+    passwordHash: p.passwordHash,
   };
 }
 
