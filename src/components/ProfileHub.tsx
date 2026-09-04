@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  AVATARS, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
+  AVATARS, verifyPassword, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
   type Profile, type ThemeKey,
 } from "@/lib/profiles";
 
@@ -17,22 +17,25 @@ const THEMES: { key: ThemeKey; label: string; hint: string }[] = [
   { key: "elder", label: "Comfort", hint: "Larger text, high contrast" },
 ];
 
-type FormState = {
+export type FormState = {
   name: string; age: string; country: string;
   day: string; month: string; year: string; avatar: string;
+  password?: string;
 };
 
-const blank: FormState = { name: "", age: "", country: "", day: "", month: "", year: "", avatar: AVATARS[0] };
+const blank: FormState = { name: "", age: "", country: "", day: "", month: "", year: "", avatar: AVATARS[0], password: "" };
 
 function ProfileForm({
-  initial, submitLabel, onSubmit, onCancel,
+  initial, submitLabel, onSubmit, onCancel, askPassword,
 }: {
   initial?: Partial<FormState>;
   submitLabel: string;
   onSubmit: (v: FormState) => void;
   onCancel?: () => void;
+  askPassword?: boolean;
 }) {
   const [v, setV] = useState<FormState>({ ...blank, ...initial });
+  const [confirm2, setConfirm2] = useState("");
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setV({ ...blank, ...initial }); }, [initial]);
 
@@ -43,6 +46,11 @@ function ProfileForm({
     if (!v.age.trim() || Number(v.age) < 3 || Number(v.age) > 120) return setError("Please add a valid age (3–120).");
     if (!v.country.trim()) return setError("Please add your country.");
     if (!v.day || !v.month || !v.year) return setError("Please add your birthday: day, month and year.");
+    if (askPassword) {
+      const pw = v.password ?? "";
+      if (pw.length < 6) return setError("Please choose a password with at least 6 characters.");
+      if (pw !== confirm2) return setError("The two passwords do not match.");
+    }
     setError(null);
     onSubmit({ ...v, name: v.name.trim().slice(0, 60), country: v.country.trim().slice(0, 60) });
   };
@@ -100,6 +108,24 @@ function ProfileForm({
         </div>
       </fieldset>
 
+      {askPassword && (
+        <>
+          <label className="text-sm font-semibold">
+            Password 🔒
+            <input type="password" autoComplete="new-password" value={v.password ?? ""} onChange={(e) => set("password", e.target.value.slice(0, 64))} placeholder="At least 6 characters"
+              className="mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 text-base font-normal outline-none focus:border-primary" />
+          </label>
+          <label className="text-sm font-semibold">
+            Confirm password
+            <input type="password" autoComplete="new-password" value={confirm2} onChange={(e) => setConfirm2(e.target.value.slice(0, 64))} placeholder="Type it again"
+              className="mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 text-base font-normal outline-none focus:border-primary" />
+          </label>
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            🔐 Your password is scrambled (hashed) and stored only on this device. It is never sent anywhere and cannot be read back.
+          </p>
+        </>
+      )}
+
       {error && <p className="text-sm font-medium text-destructive sm:col-span-2">{error}</p>}
 
       <div className="flex flex-wrap gap-2 sm:col-span-2">
@@ -127,6 +153,16 @@ export default function ProfileHub({
   onDelete: (id: string) => void;
 }) {
   const [view, setView] = useState<"none" | "create" | "edit" | "settings">("none");
+  const [loginFor, setLoginFor] = useState<string | null>(null);
+  const [pw, setPw] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  const tryLogin = async () => {
+    const target = profiles.find((p) => p.id === loginFor);
+    if (!target) return;
+    if (await verifyPassword(target, pw)) { setLoginFor(null); setPw(""); onSwitch(target.id); }
+    else setPwError("Wrong password. Try again.");
+  };
   useEffect(() => { if (!active) setView("none"); }, [active]);
 
   const ageNum = Number(active?.age ?? 0);
@@ -145,9 +181,10 @@ export default function ProfileHub({
           {profiles.length ? "Add another person 👥" : "Create your free account 🎉"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          No email, no password — just tell Foco a little about you. Perfect for kids, students, grown-ups and grandparents.
+          No email needed — just your name and a private password kept on this device. Perfect for kids, students, grown-ups and grandparents.
         </p>
         <ProfileForm
+          askPassword
           submitLabel={profiles.length ? "Add profile 🚀" : "Create my account 🚀"}
           onSubmit={(v) => { onCreate(v); setView("none"); }}
           onCancel={profiles.length ? () => setView("none") : undefined}
@@ -257,17 +294,30 @@ export default function ProfileHub({
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
           <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Switch user</span>
           {profiles.map((p) => (
-            <button key={p.id} onClick={() => onSwitch(p.id)}
+            <button key={p.id} onClick={() => { if (p.id !== active.id && p.passwordHash) { setLoginFor(p.id); setPw(""); setPwError(null); } else onSwitch(p.id); }}
               className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
                 p.id === active.id ? "border-primary bg-accent" : "border-border hover:bg-muted"
               }`}>
-              <span>{p.avatar}</span>{p.name.split(" ")[0]}
+              <span>{p.avatar}</span>{p.name.split(" ")[0]}{p.passwordHash ? " 🔒" : ""}
             </button>
           ))}
           <button onClick={() => setView("create")} className="rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-muted">
             + Add person
           </button>
         </div>
+
+        {loginFor && (
+          <form onSubmit={(e) => { e.preventDefault(); void tryLogin(); }} className="mt-4 rounded-2xl border border-border bg-muted/40 p-4">
+            <p className="text-sm font-bold">🔒 Enter the password for {profiles.find((p) => p.id === loginFor)?.name}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password"
+                className="flex-1 rounded-2xl border border-border bg-background px-4 py-2 text-base outline-none focus:border-primary" />
+              <button type="submit" className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-primary-foreground">Unlock</button>
+              <button type="button" onClick={() => { setLoginFor(null); setPwError(null); }} className="rounded-full border border-border px-5 py-2 text-sm font-semibold hover:bg-muted">Cancel</button>
+            </div>
+            {pwError && <p className="mt-2 text-sm font-medium text-destructive">{pwError}</p>}
+          </form>
+        )}
 
         <p className="mt-3 text-xs text-muted-foreground">
           Free plan: {MONTHLY_FREE_CREDITS} credits every month. Pro ({SUBSCRIPTION_PRICE}/month): {MONTHLY_PRO_CREDITS.toLocaleString()} credits.
