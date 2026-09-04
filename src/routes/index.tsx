@@ -766,6 +766,14 @@ function Index() {
                         />
                         AI monitoring
                       </label>
+                      <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={recordEnabled}
+                          onChange={(e) => setRecordEnabled(e.target.checked)}
+                        />
+                        Record session snapshots
+                      </label>
                       <button
                         onClick={stopCam}
                         className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold hover:bg-accent"
@@ -1008,10 +1016,39 @@ function Index() {
         </div>
       </section>
 
+      {/* Safety */}
+      <section id="safety" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
+          <h2 className="text-2xl font-bold tracking-tight">🛡️ Is Focuser safe? Yes — here is exactly why</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Focuser is built to be risk-free for children, students and families. Nothing about you is sold, shared or made public.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {[
+              ["🔐 Password protected", "Every account has its own password. It is scrambled with SHA-256 on your device — the real password is never stored or sent anywhere."],
+              ["📵 No accounts on the internet", "There is no server database of users. Your profile, streaks, Focolara and history live only in this browser."],
+              ["🎥 Camera stays with you", "Session snapshots are optional, saved on this device only, and you can delete them any time with one tap."],
+              ["🤖 AI sees only what it needs", "A focus check sends one small frame to the AI to answer 'focused or not', then it is discarded. Nothing is kept."],
+              ["🙅 No ads, no tracking, no selling", "No advertising pixels, no analytics profiling, no data brokers. Ever."],
+              ["🧹 One-tap delete", "Clear your history, turn off the camera, or delete the whole profile whenever you want — it is gone immediately."],
+            ].map(([t, d]) => (
+              <div key={t} className="rounded-2xl border border-border bg-background p-4">
+                <div className="text-sm font-bold">{t}</div>
+                <p className="mt-1 text-sm text-muted-foreground">{d}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Children should always ask a parent before turning the camera on. Parents can review every saved session in Progress history.
+          </p>
+        </div>
+      </section>
+
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-6 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} Focuser</span>
           <span>Focus. Learn. Grow.</span>
+          <a href="/owner" className="text-xs text-muted-foreground/60 hover:text-foreground">·</a>
         </div>
         <div className="px-6 pb-8 text-center">
           <p
