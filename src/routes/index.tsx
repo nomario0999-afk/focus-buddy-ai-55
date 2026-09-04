@@ -962,6 +962,16 @@ function Index() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {h.distractions === 0 ? "No distractions detected" : `${h.distractions} distraction${h.distractions > 1 ? "s" : ""} detected`}
                   </p>
+                  {h.frames && h.frames.length > 0 && (
+                    <div className="mt-2">
+                      <div className="flex flex-wrap gap-2">
+                        {h.frames.map((f, i) => (
+                          <img key={i} src={f} alt={`Session snapshot ${i + 1}`} className="h-16 w-24 rounded-lg border border-border object-cover" />
+                        ))}
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">🔒 Recording saved on this device only. Never uploaded.</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
