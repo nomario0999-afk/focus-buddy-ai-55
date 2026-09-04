@@ -10,13 +10,13 @@ import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
-import FunGames3D from "@/components/FunGames3D";
 import GkChallenges from "@/components/GkChallenges";
+import SubscribeRequest from "@/components/SubscribeRequest";
 import { useGameUnlocks } from "@/lib/game-unlocks";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
-  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS,
+  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS, hashPassword,
   type HistoryEntry,
 } from "@/lib/profiles";
 
@@ -179,6 +179,8 @@ function Index() {
   const checksRef = useRef(0);
   const distractionsRef = useRef(0);
   const summarizedRef = useRef(false);
+  const framesRef = useRef<string[]>([]);
+  const [recordEnabled, setRecordEnabled] = useState(false);
 
   // Study context + tutor chat
   const [grade, setGrade] = useState("");
@@ -423,6 +425,7 @@ function Index() {
     const img = captureFrame();
     if (!img) return;
     setIsChecking(true);
+    if (recordEnabled) framesRef.current = [...framesRef.current, img].slice(-6);
     try {
       const result = await runCheck({ data: { imageDataUrl: img } });
       setLastCheck({ focused: result.focused, reason: result.reason, at: Date.now() });
@@ -455,7 +458,7 @@ function Index() {
     } finally {
       setIsChecking(false);
     }
-  }, [captureFrame, runCheck, isChecking, beep, speak, mode, resetStreak]);
+  }, [captureFrame, runCheck, isChecking, beep, speak, mode, resetStreak, recordEnabled]);
 
   // Interval: run check every 20s while focused session is running and cam on
   useEffect(() => {
@@ -501,10 +504,12 @@ function Index() {
       focusScore: result.focusScore,
       tip: result.tip,
       distractions,
+      frames: recordEnabled ? framesRef.current.slice(-4) : undefined,
     });
     checksRef.current = 0;
     distractionsRef.current = 0;
-  }, [chat, subject, grade, streak, runSummarize, saveHistory]);
+    framesRef.current = [];
+  }, [chat, subject, grade, streak, runSummarize, saveHistory, recordEnabled]);
 
   useEffect(() => {
     if (mode !== "focus") return;
@@ -541,6 +546,8 @@ function Index() {
           <a href="#timer" className="hover:text-foreground">Timer</a>
           <a href="#games" className="hover:text-foreground">Games</a>
           <a href="#account" className="hover:text-foreground">Account</a>
+          <a href="#safety" className="hover:text-foreground">Safety</a>
+          <a href="/proctor" className="hover:text-foreground">Exam Mode</a>
         </nav>
         <a
           href="#account"
@@ -584,12 +591,16 @@ function Index() {
             className="absolute inset-0 -z-10 rounded-full opacity-60 blur-3xl"
             style={{ background: "var(--gradient-hero)" }}
           />
+          <div className="absolute -top-2 right-2 z-10 max-w-[200px] animate-[foco-pop_3s_ease-in-out_infinite] rounded-2xl border border-border bg-card px-4 py-2 text-sm font-bold shadow-[var(--shadow-soft)]">
+            Let's learn something new! ✨
+            <span className="absolute -bottom-1 left-6 h-3 w-3 rotate-45 border-b border-r border-border bg-card" />
+          </div>
           <img
             src={focoMascot}
             alt="Foco, the Focuser AI study mascot"
             width={520}
             height={520}
-            className="w-72 drop-shadow-[0_20px_40px_oklch(0.62_0.19_250/0.25)] md:w-96"
+            className="w-72 animate-[foco-float_3.2s_ease-in-out_infinite] drop-shadow-[0_20px_40px_oklch(0.62_0.19_250/0.25)] md:w-96"
           />
         </div>
       </section>
@@ -601,7 +612,11 @@ function Index() {
             profiles={profiles}
             active={profile}
             onSwitch={setActiveId}
-            onCreate={(v) => addProfile(v as never)}
+            onCreate={(v) => {
+              const created = addProfile(v as never);
+              const pw = (v as { password?: string }).password;
+              if (pw) void hashPassword(pw, created.id).then((h) => updateProfile(created.id, { passwordHash: h }));
+            }}
             onUpdate={updateProfile}
             onDelete={removeProfile}
           />
@@ -618,9 +633,17 @@ function Index() {
                   patchActive({ subscribed: false });
                   return;
                 }
-                patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS });
+                document.getElementById("subscribe-request")?.scrollIntoView({ behavior: "smooth" });
               }}
             />
+          )}
+          {profile && !profile.subscribed && (
+            <div id="subscribe-request">
+              <SubscribeRequest
+                plan="pro"
+                onActivated={() => patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS })}
+              />
+            </div>
           )}
         </div>
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-10">
@@ -940,7 +963,6 @@ function Index() {
           <GkChallenges onWin={(c) => addCredits(c)} lock={gameLock} />
           <GameArcade onWin={(c) => addCredits(c)} lock={gameLock} />
           <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} lock={gameLock} />
-          <FunGames3D unlocked={streak > 0 || history.length > 0} streak={streak} onWin={(c) => addCredits(c)} lock={gameLock} />
         </div>
       </section>
 
