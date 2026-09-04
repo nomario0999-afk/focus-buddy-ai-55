@@ -12,6 +12,7 @@ import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
 import GkChallenges from "@/components/GkChallenges";
 import SubscribeRequest from "@/components/SubscribeRequest";
+import { PRO_PRICE } from "@/lib/billing";
 import { useGameUnlocks } from "@/lib/game-unlocks";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
@@ -641,6 +642,9 @@ function Index() {
             <div id="subscribe-request">
               <SubscribeRequest
                 plan="pro"
+                price={PRO_PRICE}
+                title="Want Focuser Pro? Message us first 💬"
+                blurb="No live chat — send this short message. You get our payment number, pay by number, and we send you an activation code."
                 onActivated={() => patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS })}
               />
             </div>

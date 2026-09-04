@@ -193,3 +193,12 @@
   font-size: 19px;
 }
 .theme-elder p, .theme-elder .text-sm { letter-spacing: 0.01em; }
+
+@keyframes foco-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-14px) rotate(1.5deg); }
+}
+@keyframes foco-pop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.04); }
+}
