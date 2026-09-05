@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SubscribeRequest from "@/components/SubscribeRequest";
 import { TEACHER_PRICE } from "@/lib/billing";
-import { createGazeTracker, fmtClock } from "@/lib/gaze-tracker";
+import { createGazeTracker, fmtClock, fmtDur } from "@/lib/gaze-tracker";
+import { useProfiles } from "@/lib/profiles";
 import { makeCode, summarizeCsv, useClassroom, type ExamSession, type Flag } from "@/lib/classroom";
 
 export const Route = createFileRoute("/proctor")({
@@ -83,12 +84,38 @@ function TeacherView() {
   const [paid, setPaid] = useState(false);
   const [title, setTitle] = useState("Maths Unit Test");
   const [teacher, setTeacher] = useState("");
+  const { active: me, ready } = useProfiles();
   const { sessions, mutate } = useClassroom();
   const [activeCode, setActiveCode] = useState<string | null>(null);
 
   useEffect(() => {
     setPaid(localStorage.getItem(PAID_KEY) === "1");
   }, []);
+
+  useEffect(() => {
+    if (me?.role === "teacher" && !teacher) setTeacher(me.name);
+  }, [me, teacher]);
+
+  if (ready && me?.role !== "teacher") {
+    return (
+      <div className="rounded-3xl border border-border bg-card p-8 text-center shadow-[var(--shadow-card)]">
+        <div className="text-5xl" aria-hidden="true">🍎</div>
+        <h2 className="mt-3 text-2xl font-black tracking-tight">Sign in with a teacher account</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          {me
+            ? `${me.name} is a student account. Add or switch to a teacher account to create classes, run exams and see the live dashboard.`
+            : "Create a free teacher account first — pick “Teacher” when you make it — then come back here to create your classes."}
+        </p>
+        <Link
+          to="/"
+          className="mt-5 inline-block rounded-full px-6 py-3 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)]"
+          style={{ background: "var(--gradient-fun)" }}
+        >
+          {me ? "Switch account" : "Create teacher account"}
+        </Link>
+      </div>
+    );
+  }
 
   if (!paid) {
     return (
@@ -289,7 +316,15 @@ function Dashboard({
                       <img src={s.snapshot} alt={`${s.name} live thumbnail`} className="mt-2 h-24 w-full rounded-xl object-cover" />
                     )}
                     <p className="mt-2 text-xs text-muted-foreground">{s.reason}</p>
-                    <p className="text-xs font-semibold">🚩 {s.flags.length} flagged look-away{s.flags.length === 1 ? "" : "s"}</p>
+                    <p className="text-xs font-semibold">
+                      🚩 {s.flags.length} flagged look-away{s.flags.length === 1 ? "" : "s"} ·{" "}
+                      {fmtDur(s.flags.reduce((t, f) => t + (f.end - f.start), 0))} away in total
+                    </p>
+                    {s.flags[0] && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Last: {fmtClock(s.flags[0].start)} → {fmtClock(s.flags[0].end)} ({fmtDur(s.flags[0].end - s.flags[0].start)})
+                      </p>
+                    )}
                   </div>
                 );
               })}
@@ -306,7 +341,7 @@ function Dashboard({
               {alerts.map((a) => (
                 <li key={a.id} className="rounded-2xl border border-border p-3 text-xs">
                   <span className="font-bold">{a.name}</span> looked away for{" "}
-                  <span className="font-bold">{((a.end - a.start) / 1000).toFixed(1)}s</span>
+                  <span className="font-bold">{fmtDur(a.end - a.start)}</span>
                   <div className="text-muted-foreground">
                     {fmtClock(a.start)} → {fmtClock(a.end)} · {a.reason}
                   </div>
@@ -523,7 +558,7 @@ function StudentView() {
           {flags.length === 0 && <li>None — keep your eyes on the screen.</li>}
           {flags.map((f) => (
             <li key={f.id}>
-              {fmtClock(f.start)} → {fmtClock(f.end)} ({((f.end - f.start) / 1000).toFixed(1)}s) · {f.reason}
+              {fmtClock(f.start)} → {fmtClock(f.end)} ({fmtDur(f.end - f.start)}) · {f.reason}
             </li>
           ))}
         </ul>
