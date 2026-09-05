@@ -93,3 +93,12 @@ export function createGazeTracker() {
 export function fmtClock(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
+
+/** Human duration: "8s", "1m 04s", "12m 07s". */
+export function fmtDur(ms: number) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  if (m === 0) return `${(ms / 1000).toFixed(1)}s`;
+  return `${m}m ${String(sec).padStart(2, "0")}s`;
+}
