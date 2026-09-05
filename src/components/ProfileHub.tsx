@@ -20,10 +20,11 @@ const THEMES: { key: ThemeKey; label: string; hint: string }[] = [
 export type FormState = {
   name: string; age: string; country: string;
   day: string; month: string; year: string; avatar: string;
+  role: "student" | "teacher";
   password?: string;
 };
 
-const blank: FormState = { name: "", age: "", country: "", day: "", month: "", year: "", avatar: AVATARS[0], password: "" };
+const blank: FormState = { name: "", age: "", country: "", day: "", month: "", year: "", avatar: AVATARS[0], role: "student", password: "" };
 
 function ProfileForm({
   initial, submitLabel, onSubmit, onCancel, askPassword,
@@ -105,6 +106,28 @@ function ProfileForm({
             <option value="">Year</option>
             {Array.from({ length: 110 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
+        </div>
+      </fieldset>
+
+      <fieldset className="sm:col-span-2">
+        <legend className="text-sm font-semibold">I am a…</legend>
+        <div className="mt-1 grid gap-2 sm:grid-cols-2">
+          {([
+            { key: "student", label: "🎒 Student", hint: "Timer, tutor, games and streaks" },
+            { key: "teacher", label: "🍎 Teacher", hint: "Class dashboard and exam mode" },
+          ] as const).map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => set("role", r.key)}
+              className={`rounded-2xl border p-3 text-left transition ${
+                v.role === r.key ? "border-primary bg-accent" : "border-border hover:bg-muted"
+              }`}
+            >
+              <div className="text-sm font-bold">{r.label}</div>
+              <div className="text-xs font-normal text-muted-foreground">{r.hint}</div>
+            </button>
+          ))}
         </div>
       </fieldset>
 
