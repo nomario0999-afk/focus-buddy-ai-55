@@ -40,7 +40,7 @@ function ProfileForm({
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setV({ ...blank, ...initial }); }, [initial]);
 
-  const set = (k: keyof FormState, val: string) => setV((s) => ({ ...s, [k]: val }));
+  const set = <K extends keyof FormState>(k: K, val: FormState[K]) => setV((s) => ({ ...s, [k]: val }));
 
   const submit = () => {
     if (!v.name.trim()) return setError("Please write your name.");
