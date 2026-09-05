@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   AVATARS, verifyPassword, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
   type Profile, type ThemeKey,
@@ -20,10 +21,11 @@ const THEMES: { key: ThemeKey; label: string; hint: string }[] = [
 export type FormState = {
   name: string; age: string; country: string;
   day: string; month: string; year: string; avatar: string;
+  role: "student" | "teacher";
   password?: string;
 };
 
-const blank: FormState = { name: "", age: "", country: "", day: "", month: "", year: "", avatar: AVATARS[0], password: "" };
+const blank: FormState = { name: "", age: "", country: "", day: "", month: "", year: "", avatar: AVATARS[0], role: "student", password: "" };
 
 function ProfileForm({
   initial, submitLabel, onSubmit, onCancel, askPassword,
@@ -39,7 +41,7 @@ function ProfileForm({
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setV({ ...blank, ...initial }); }, [initial]);
 
-  const set = (k: keyof FormState, val: string) => setV((s) => ({ ...s, [k]: val }));
+  const set = <K extends keyof FormState>(k: K, val: FormState[K]) => setV((s) => ({ ...s, [k]: val }));
 
   const submit = () => {
     if (!v.name.trim()) return setError("Please write your name.");
@@ -105,6 +107,28 @@ function ProfileForm({
             <option value="">Year</option>
             {Array.from({ length: 110 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
+        </div>
+      </fieldset>
+
+      <fieldset className="sm:col-span-2">
+        <legend className="text-sm font-semibold">I am a…</legend>
+        <div className="mt-1 grid gap-2 sm:grid-cols-2">
+          {([
+            { key: "student", label: "🎒 Student", hint: "Timer, tutor, games and streaks" },
+            { key: "teacher", label: "🍎 Teacher", hint: "Class dashboard and exam mode" },
+          ] as const).map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => set("role", r.key)}
+              className={`rounded-2xl border p-3 text-left transition ${
+                v.role === r.key ? "border-primary bg-accent" : "border-border hover:bg-muted"
+              }`}
+            >
+              <div className="text-sm font-bold">{r.label}</div>
+              <div className="text-xs font-normal text-muted-foreground">{r.hint}</div>
+            </button>
+          ))}
         </div>
       </fieldset>
 
@@ -282,11 +306,19 @@ export default function ProfileHub({
             <p className="text-sm text-muted-foreground">
               {active.age} years old · {active.country} · 🎂 {active.day} {active.month} {active.year}
             </p>
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-3 py-0.5 text-xs font-bold">
+              {active.role === "teacher" ? "🍎 Teacher account" : "🎒 Student account"}
+            </span>
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
             <span className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground">
               🪙 {active.credits.toLocaleString()} credits
             </span>
+            {active.role === "teacher" && (
+              <Link to="/proctor" className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)]" style={{ background: "var(--gradient-fun)" }}>
+                🏫 Teacher dashboard
+              </Link>
+            )}
             <button onClick={() => setView("settings")} className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent">⚙️ Settings</button>
           </div>
         </div>

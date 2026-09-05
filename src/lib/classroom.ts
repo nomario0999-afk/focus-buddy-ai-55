@@ -1,3 +1,4 @@
+import { fmtDur } from "@/lib/gaze-tracker";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Flag = {
@@ -88,7 +89,7 @@ export function useClassroom() {
 }
 
 export function summarizeCsv(session: ExamSession) {
-  const rows = [["Student", "Away start", "Away end", "Duration (s)", "Reason"]];
+  const rows = [["Student", "Away start", "Away end", "Duration (s)", "Duration", "Reason"]];
   for (const s of Object.values(session.students)) {
     if (s.flags.length === 0) rows.push([s.name, "—", "—", "0", "No flags"]);
     for (const f of s.flags) {
@@ -97,6 +98,7 @@ export function summarizeCsv(session: ExamSession) {
         new Date(f.start).toLocaleTimeString(),
         new Date(f.end).toLocaleTimeString(),
         ((f.end - f.start) / 1000).toFixed(1),
+        fmtDur(f.end - f.start),
         f.reason,
       ]);
     }

@@ -25,6 +25,8 @@ export type Profile = {
   streak: number;
   bestStreak: number;
   theme: ThemeKey;
+  /** Students study; teachers get the classroom / exam dashboard. */
+  role: "student" | "teacher";
   consent: Consent | null;
   /** Salted SHA-256 hash of the account password (never the password itself). */
   passwordHash?: string;
@@ -123,6 +125,7 @@ export function normalize(p: Profile): Profile {
     streak: p.streak ?? 0,
     bestStreak: p.bestStreak ?? p.streak ?? 0,
     theme: p.theme ?? "auto",
+    role: p.role === "teacher" ? "teacher" : "student",
     consent: p.consent ?? null,
     passwordHash: p.passwordHash,
   };
