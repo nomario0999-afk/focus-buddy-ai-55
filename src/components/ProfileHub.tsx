@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AVATARS, verifyPassword, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
   type Profile, type ThemeKey,
@@ -178,6 +180,23 @@ export default function ProfileHub({
 }) {
   const [view, setView] = useState<"none" | "create" | "edit" | "settings">("none");
   const [loginFor, setLoginFor] = useState<string | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  const signInWithGoogle = async () => {
+    setGoogleBusy(true);
+    setGoogleError(null);
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    if (result.error) { setGoogleBusy(false); setGoogleError(result.error.message || "Google sign-in failed. Try again."); return; }
+    if (result.redirected) return;
+    // Signed in: prefill the account form with the Google name.
+    setGoogleBusy(false);
+    setView("create");
+    const { data } = await supabase.auth.getUser();
+    const name = (data.user?.user_metadata as { full_name?: string } | undefined)?.full_name ?? "";
+    if (name) setGoogleName(name);
+  };
+  const [googleName, setGoogleName] = useState("");
   const [pw, setPw] = useState("");
   const [pwError, setPwError] = useState<string | null>(null);
 
@@ -207,7 +226,14 @@ export default function ProfileHub({
         <p className="mt-1 text-sm text-muted-foreground">
           No email needed — just your name and a private password kept on this device. Perfect for kids, students, grown-ups and grandparents.
         </p>
+        {googleName && (
+          <p className="mt-2 rounded-2xl bg-accent px-4 py-2 text-sm font-semibold">
+            ✅ Signed in with Google — your name is filled in below. Add a password too so you can switch between profiles.
+          </p>
+        )}
         <ProfileForm
+          key={googleName}
+          initial={googleName ? { name: googleName } : undefined}
           askPassword
           submitLabel={profiles.length ? "Add profile 🚀" : "Create my account 🚀"}
           onSubmit={(v) => { onCreate(v); setView("none"); }}
