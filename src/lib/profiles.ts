@@ -50,7 +50,7 @@ const STORE_KEY = "focuser.users";
 const LEGACY_KEY = "focuser.profile";
 
 export const CURRENCY = "Focolara";
-export const MONTHLY_FREE_CREDITS = 250;
+export const MONTHLY_FREE_CREDITS = 100;
 export const MONTHLY_PRO_CREDITS = 500000;
 export const STREAK_BONUS_CREDITS = 70;
 /** Awarded once per game won — never per question. */

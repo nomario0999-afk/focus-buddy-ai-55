@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PAY_NAME, PAY_NUMBER, isActivationCode, saveRequest, type PayRequest } from "@/lib/billing";
+import { PAY_NAME, PAY_NUMBER, PAY_NUMBER_ALT, isActivationCode, saveRequest, type PayRequest } from "@/lib/billing";
 
 export default function SubscribeRequest({
   plan,
@@ -84,6 +84,7 @@ export default function SubscribeRequest({
           <div className="rounded-2xl border border-border bg-muted/50 p-4">
             <p className="text-sm font-semibold">✅ Request sent. Now pay {price} to this number:</p>
             <p className="mt-2 select-all text-2xl font-black tracking-tight">{PAY_NUMBER}</p>
+            <p className="select-all text-lg font-black tracking-tight text-muted-foreground">{PAY_NUMBER_ALT}</p>
             <p className="text-xs text-muted-foreground">Account name: {PAY_NAME}</p>
             <p className="mt-2 text-xs text-muted-foreground">
               Send the transfer, then we send you an activation code on your number. Paste it below to unlock. No refunds on cancel — money and Focolara already given are not returned.
