@@ -7,10 +7,11 @@
  *
  * OWNER: replace these three values with your real details.
  */
-export const PAY_NUMBER = "+966 50 000 0000";
+export const PAY_NUMBER = "9148571490";
+export const PAY_NUMBER_ALT = "553727589";
 export const PAY_NAME = "Muhammad Noman Hussain";
 /** Code the owner gives a buyer once their transfer has landed. */
-export const ACTIVATION_CODE = "FOCUSER-PAID";
+export const ACTIVATION_CODE = "NOMAN-KNJTHD";
 
 export const PRO_PRICE = "$15";
 export const TEACHER_PRICE = "100 SAR";
