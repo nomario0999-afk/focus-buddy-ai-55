@@ -125,7 +125,7 @@ function TeacherView() {
             <div>
               <h2 className="text-2xl font-black tracking-tight">🔒 Teacher access locked</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Creating or launching a proctored class needs a teacher pass.
+                You are signed in as a teacher 🍎. To run exams at scale, unlock teacher access with a one-time payment — pay by number, then we send your activation code.
               </p>
             </div>
             <div className="text-right">
