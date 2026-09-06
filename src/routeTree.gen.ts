@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProctorRouteImport } from './routes/proctor'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicWellKnownAssetlinksRouteImport } from './routes/api/public/well-known/assetlinks'
 
 const ProctorRoute = ProctorRouteImport.update({
   id: '/proctor',
@@ -28,35 +29,50 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWellKnownAssetlinksRoute =
+  ApiPublicWellKnownAssetlinksRouteImport.update({
+    id: '/api/public/well-known/assetlinks',
+    path: '/api/public/well-known/assetlinks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
   '/proctor': typeof ProctorRoute
+  '/api/public/well-known/assetlinks': typeof ApiPublicWellKnownAssetlinksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
   '/proctor': typeof ProctorRoute
+  '/api/public/well-known/assetlinks': typeof ApiPublicWellKnownAssetlinksRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/owner': typeof OwnerRoute
   '/proctor': typeof ProctorRoute
+  '/api/public/well-known/assetlinks': typeof ApiPublicWellKnownAssetlinksRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/owner' | '/proctor'
+  fullPaths: '/' | '/owner' | '/proctor' | '/api/public/well-known/assetlinks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/owner' | '/proctor'
-  id: '__root__' | '/' | '/owner' | '/proctor'
+  to: '/' | '/owner' | '/proctor' | '/api/public/well-known/assetlinks'
+  id:
+    | '__root__'
+    | '/'
+    | '/owner'
+    | '/proctor'
+    | '/api/public/well-known/assetlinks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OwnerRoute: typeof OwnerRoute
   ProctorRoute: typeof ProctorRoute
+  ApiPublicWellKnownAssetlinksRoute: typeof ApiPublicWellKnownAssetlinksRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +98,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/well-known/assetlinks': {
+      id: '/api/public/well-known/assetlinks'
+      path: '/api/public/well-known/assetlinks'
+      fullPath: '/api/public/well-known/assetlinks'
+      preLoaderRoute: typeof ApiPublicWellKnownAssetlinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +112,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OwnerRoute: OwnerRoute,
   ProctorRoute: ProctorRoute,
+  ApiPublicWellKnownAssetlinksRoute: ApiPublicWellKnownAssetlinksRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
