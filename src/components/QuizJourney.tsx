@@ -154,7 +154,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
                       : done ? "border-primary bg-accent text-primary"
                       : "border-primary text-primary-foreground"
                   }`}
-                  style={!isLocked && !done ? { background: "var(--gradient-fun)", color: "hsl(var(--primary-foreground))" } : undefined}
+                  style={!isLocked && !done ? { background: "var(--gradient-fun)"} : undefined}
                 >
                   <span className="text-xl" aria-hidden="true">{isLocked ? "🔒" : done ? "🏆" : "▶"}</span>
                   <span className="mt-1">Level {lvl}</span>
