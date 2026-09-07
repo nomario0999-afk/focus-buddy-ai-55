@@ -11,6 +11,7 @@ import CreditsPanel from "@/components/CreditsPanel";
 import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
 import GkChallenges from "@/components/GkChallenges";
+import QuizJourney from "@/components/QuizJourney";
 import SubscribeRequest from "@/components/SubscribeRequest";
 import { PRO_PRICE } from "@/lib/billing";
 import { useGameUnlocks } from "@/lib/game-unlocks";
@@ -982,6 +983,12 @@ function Index() {
       {/* Mini games */}
       <section id="games" className="mx-auto max-w-6xl px-6 pb-20">
         <div className="space-y-6">
+          <QuizJourney
+            profileId={profile?.id ?? null}
+            grade={grade}
+            subscribed={Boolean(profile?.subscribed)}
+            onWin={(c) => addCredits(c)}
+          />
           <GkChallenges onWin={(c) => addCredits(c)} lock={gameLock} />
           <GameArcade onWin={(c) => addCredits(c)} lock={gameLock} />
           <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} lock={gameLock} />
