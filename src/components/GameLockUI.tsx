@@ -5,7 +5,7 @@ import { CURRENCY } from "@/lib/profiles";
 export function LockHeaderBar({ lock }: { lock: GameLock }) {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-dashed border-border bg-muted/50 px-4 py-2 text-xs font-semibold">
-      <span>🔒 Every game unlocks with a 🔥 streak + {GAME_UNLOCK_COST} {CURRENCY}</span>
+      <span>🎁 Your first game is free · after that every game unlocks with a 🔥 streak + {GAME_UNLOCK_COST} {CURRENCY}</span>
       <span className="rounded-full bg-background px-2 py-0.5">🔥 {lock.streak}</span>
       <span className="rounded-full bg-background px-2 py-0.5">🪙 {lock.credits.toLocaleString()}</span>
     </div>

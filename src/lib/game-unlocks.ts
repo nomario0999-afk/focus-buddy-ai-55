@@ -34,14 +34,17 @@ export function useGameUnlocks(
 
   const unlock = useCallback((id: string) => {
     if (ids.includes(id)) return null;
-    if (streak < 1) return "You need at least a 🔥 1 streak — finish one focus session first.";
-    if (credits < GAME_UNLOCK_COST) return `You need ${GAME_UNLOCK_COST} Focolara to unlock this game.`;
+    // The very first game is free, so a new player can try one straight away.
+    const free = ids.length === 0;
+    if (!free && streak < 1) return "You need at least a 🔥 1 streak — finish one focus session first.";
+    if (!free && credits < GAME_UNLOCK_COST) return `You need ${GAME_UNLOCK_COST} Focolara to unlock this game.`;
     const next = [...ids, id];
     setIds(next);
     try { localStorage.setItem(key(profileId), JSON.stringify(next)); } catch { /* ignore */ }
-    spend(-GAME_UNLOCK_COST);
+    if (!free) spend(-GAME_UNLOCK_COST);
     return null;
   }, [ids, streak, credits, spend, profileId]);
+
 
   return { streak, credits, cost: GAME_UNLOCK_COST, isUnlocked, unlock };
 }
