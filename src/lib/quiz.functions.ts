@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 /** One question. `match` uses pairs; every other type uses options + answer index/text. */
-export const QuizQuestion = z.object({
+const Shape = z.object({
   type: z.enum(["mcq", "truefalse", "blank", "match"]),
   q: z.string().min(1).max(400),
   options: z.array(z.string().max(160)).max(6).default([]),
@@ -11,6 +11,23 @@ export const QuizQuestion = z.object({
   pairs: z.array(z.object({ left: z.string().max(80), right: z.string().max(80) })).max(5).default([]),
   explain: z.string().max(300).default(""),
 });
+
+/** Models name the fields inconsistently, so accept the common aliases. */
+export const QuizQuestion = z.preprocess((raw) => {
+  if (typeof raw !== "object" || raw === null) return raw;
+  const r = raw as Record<string, unknown>;
+  const type = r['type'] ?? (Array.isArray(r['pairs']) && (r['pairs'] as unknown[]).length ? "match" : undefined);
+  return {
+    ...r,
+    type: type ?? (Array.isArray(r['options']) && (r['options'] as unknown[]).length ? "mcq" : "blank"),
+    q: r['q'] ?? r['question'] ?? r['text'] ?? r['prompt'] ?? "",
+    answer: r['answer'] ?? r['correct'] ?? r['correctAnswer'] ?? r['answerIndex'] ?? 0,
+    explain: r['explain'] ?? r['explanation'] ?? "",
+    options: Array.isArray(r['options']) ? r['options'] : [],
+    pairs: Array.isArray(r['pairs']) ? r['pairs'] : [],
+  };
+}, Shape);
+
 export type QuizQuestion = z.infer<typeof QuizQuestion>;
 
 const Input = z.object({
