@@ -118,7 +118,7 @@ export const generateQuiz = createServerFn({ method: "POST" })
       };
       const questions = z.array(QuizQuestion).parse(parsed.questions ?? []).slice(0, 10);
       if (questions.length < 4) throw new Error("too few");
-      return { questions, period: parsed.period || period, source: "ai" };
+      return { questions, period: data.currentAffairs && parsed.period ? parsed.period : period, source: "ai" };
     } catch (e) {
       console.error("[quiz] parse", String(e).slice(0, 300), raw.slice(0, 400));
       return { questions: [], period, source: "unavailable", note: "Fresh questions are temporarily unavailable." };
