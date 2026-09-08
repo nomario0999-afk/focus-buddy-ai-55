@@ -84,6 +84,7 @@ export const generateQuiz = createServerFn({ method: "POST" })
     }
 
     if (!res.ok) {
+      console.error("[quiz] gateway", res.status, (await res.text().catch(() => "")).slice(0, 400));
       const note = res.status === 429
         ? "Too many quizzes at once — wait a few seconds and try again."
         : res.status === 402
@@ -101,7 +102,8 @@ export const generateQuiz = createServerFn({ method: "POST" })
       const questions = z.array(QuizQuestion).parse(parsed.questions ?? []).slice(0, 10);
       if (questions.length < 4) throw new Error("too few");
       return { questions, period: parsed.period || period, source: "ai" };
-    } catch {
+    } catch (e) {
+      console.error("[quiz] parse", String(e).slice(0, 300), raw.slice(0, 400));
       return { questions: [], period, source: "unavailable", note: "Fresh questions are temporarily unavailable." };
     }
   });
