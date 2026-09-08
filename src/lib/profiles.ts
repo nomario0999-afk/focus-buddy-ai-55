@@ -109,6 +109,7 @@ export function writeStore(store: Store) {
 }
 
 export function normalize(p: Profile): Profile {
+  const owner = isOwnerName(p.name);
   return {
     id: p.id || `u_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name: p.name ?? "",
@@ -119,17 +120,18 @@ export function normalize(p: Profile): Profile {
     year: p.year ?? "",
     avatar: p.avatar || AVATARS[0],
     createdAt: p.createdAt ?? Date.now(),
-    credits: typeof p.credits === "number" ? p.credits : MONTHLY_FREE_CREDITS,
+    credits: owner ? UNLIMITED : typeof p.credits === "number" ? p.credits : MONTHLY_FREE_CREDITS,
     creditsPeriod: p.creditsPeriod || currentPeriod(),
-    subscribed: Boolean(p.subscribed),
-    streak: p.streak ?? 0,
-    bestStreak: p.bestStreak ?? p.streak ?? 0,
+    subscribed: owner ? true : Boolean(p.subscribed),
+    streak: owner ? UNLIMITED : p.streak ?? 0,
+    bestStreak: owner ? UNLIMITED : p.bestStreak ?? p.streak ?? 0,
     theme: p.theme ?? "auto",
     role: p.role === "teacher" ? "teacher" : "student",
     consent: p.consent ?? null,
     passwordHash: p.passwordHash,
   };
 }
+
 
 /** Grant the monthly allowance if we've rolled into a new month. */
 function withMonthlyGrant(p: Profile): Profile {
