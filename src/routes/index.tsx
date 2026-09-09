@@ -12,6 +12,7 @@ import PortalDriveGame from "@/components/PortalDriveGame";
 import GameArcade from "@/components/GameArcade";
 import GkChallenges from "@/components/GkChallenges";
 import QuizJourney from "@/components/QuizJourney";
+import { fmtAmount, isOwnerName } from "@/lib/owners";
 import SubscribeRequest from "@/components/SubscribeRequest";
 import { PRO_PRICE } from "@/lib/billing";
 import { useGameUnlocks } from "@/lib/game-unlocks";
@@ -556,7 +557,7 @@ function Index() {
           className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)] transition hover:opacity-90"
           style={{ background: "var(--gradient-fun)" }}
         >
-          {profile ? `${profile.avatar} ${profile.name.split(" ")[0]} · 🪙 ${credits.toLocaleString()}` : "Create account"}
+          {profile ? `${profile.avatar} ${profile.name.split(" ")[0]} · 🪙 ${fmtAmount(credits)}` : "Create account"}
         </a>
       </header>
 
@@ -710,7 +711,7 @@ function Index() {
                 🏆 {sessions} today
               </div>
               <div className="rounded-full bg-[oklch(0.95_0.06_55)] px-4 py-2 text-sm font-semibold text-[oklch(0.4_0.15_45)]">
-                🔥 Streak {streak}
+                🔥 Streak {fmtAmount(streak)}
               </div>
             </div>
 
@@ -987,6 +988,7 @@ function Index() {
             profileId={profile?.id ?? null}
             grade={grade}
             subscribed={Boolean(profile?.subscribed)}
+            owner={isOwnerName(profile?.name)}
             onWin={(c) => addCredits(c)}
           />
           <GkChallenges onWin={(c) => addCredits(c)} lock={gameLock} />

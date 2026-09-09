@@ -89,7 +89,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
   if (!subject) {
     return (
       <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
-        <Header totalXp={data.totalXp} streak={data.quizStreak} />
+        <Header totalXp={data.totalXp} streak={data.quizStreak} owner={owner} />
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {QUIZ_SUBJECTS.map((s) => {
             const p = forSubject(s.id);
@@ -301,7 +301,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
   );
 }
 
-function Header({ totalXp, streak }: { totalXp: number; streak: number }) {
+function Header({ totalXp, streak, owner }: { totalXp: number; streak: number; owner?: boolean }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -311,8 +311,8 @@ function Header({ totalXp, streak }: { totalXp: number; streak: number }) {
         </p>
       </div>
       <div className="flex gap-2 text-xs font-bold">
-        <span className="rounded-full bg-muted px-3 py-1.5">⭐ {totalXp} XP</span>
-        <span className="rounded-full bg-muted px-3 py-1.5">🔥 {streak} quiz streak</span>
+        <span className="rounded-full bg-muted px-3 py-1.5">⭐ {owner ? "∞" : totalXp} XP</span>
+        <span className="rounded-full bg-muted px-3 py-1.5">🔥 {owner ? "∞" : streak} quiz streak</span>
       </div>
     </div>
   );
