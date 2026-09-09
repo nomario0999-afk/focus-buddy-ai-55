@@ -353,10 +353,15 @@ export default function ProfileHub({
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-3 py-0.5 text-xs font-bold">
               {active.role === "teacher" ? "🍎 Teacher account" : "🎒 Student account"}
             </span>
+            {isOwnerName(active.name) && (
+              <span className="mt-1 ml-2 inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-black text-primary-foreground" style={{ background: "var(--gradient-fun)" }}>
+                👑 OWNER
+              </span>
+            )}
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
             <span className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground">
-              🪙 {active.credits.toLocaleString()} credits
+              🪙 {fmtAmount(active.credits)} credits
             </span>
             {active.role === "teacher" && (
               <Link to="/proctor" className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)]" style={{ background: "var(--gradient-fun)" }}>

@@ -2,6 +2,7 @@ import {
   CURRENCY, GAME_WIN_CREDITS, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, STREAK_BONUS_CREDITS, SUBSCRIPTION_PRICE,
   type Profile,
 } from "@/lib/profiles";
+import { fmtAmount, isOwnerName } from "@/lib/owners";
 
 export default function CreditsPanel({
   profile, onSubscribe,
@@ -9,7 +10,8 @@ export default function CreditsPanel({
   profile: Profile;
   onSubscribe: () => void;
 }) {
-  const pct = Math.max(0, Math.min(100, (profile.credits / (profile.subscribed ? MONTHLY_PRO_CREDITS : MONTHLY_FREE_CREDITS)) * 100));
+  const owner = isOwnerName(profile.name);
+  const pct = owner ? 100 : Math.max(0, Math.min(100, (profile.credits / (profile.subscribed ? MONTHLY_PRO_CREDITS : MONTHLY_FREE_CREDITS)) * 100));
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -20,8 +22,8 @@ export default function CreditsPanel({
           </p>
         </div>
         <div className="text-right">
-          <div className="text-3xl font-black tabular-nums">{profile.credits.toLocaleString()}</div>
-          <div className="text-xs text-muted-foreground">{profile.subscribed ? "Pro plan" : "Free plan"}</div>
+          <div className="text-3xl font-black tabular-nums">{fmtAmount(profile.credits)}</div>
+          <div className="text-xs text-muted-foreground">{owner ? "👑 Owner — unlimited" : profile.subscribed ? "Pro plan" : "Free plan"}</div>
         </div>
       </div>
 
