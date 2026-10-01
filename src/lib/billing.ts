@@ -1,3 +1,4 @@
+import { track } from "@/lib/track";
 /**
  * Manual (number-based) payments.
  *
@@ -38,6 +39,7 @@ export function loadRequests(): PayRequest[] {
 }
 
 export function saveRequest(req: PayRequest) {
+  track("request", req.id, req.name, { plan: req.plan, contact: req.contact, message: req.message, at: req.at });
   try {
     localStorage.setItem(KEY, JSON.stringify([req, ...loadRequests()].slice(0, 50)));
   } catch {
