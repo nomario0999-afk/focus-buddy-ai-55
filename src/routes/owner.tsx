@@ -49,7 +49,7 @@ function OwnerBoard() {
         setError("");
         setSaved(c);
         localStorage.setItem(CODE_KEY, c);
-        setRows(r.rows);
+        setRows(JSON.parse(r.json) as ActivityRow[]);
       } catch {
         setError("Could not load right now. Try again.");
       }

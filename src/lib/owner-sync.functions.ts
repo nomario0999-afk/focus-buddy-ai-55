@@ -43,7 +43,7 @@ export const ownerOverview = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ code: z.string().max(60) }).parse(d))
   .handler(async ({ data }) => {
     const { OWNER_CODE } = await import("./owner-sync.server");
-    if (data.code.trim().toUpperCase() !== OWNER_CODE) return { ok: false as const, rows: [] as ActivityRow[] };
+    if (data.code.trim().toUpperCase() !== OWNER_CODE) return { ok: false as const, json: "[]" };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("app_activity" as never)
@@ -51,5 +51,5 @@ export const ownerOverview = createServerFn({ method: "POST" })
       .order("updated_at", { ascending: false })
       .limit(1000);
     if (error) throw new Error(error.message);
-    return { ok: true as const, rows: (rows ?? []) as unknown as ActivityRow[] };
+    return { ok: true as const, json: JSON.stringify(rows ?? []) };
   });

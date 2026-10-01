@@ -1,3 +1,4 @@
+import { fmtAmount, isOwnerName } from "@/lib/owners";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { lovable } from "@/integrations/lovable/index";
