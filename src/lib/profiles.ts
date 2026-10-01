@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { isOwnerName, UNLIMITED } from "@/lib/owners";
+import { track } from "@/lib/track";
 
 export type ThemeKey = "auto" | "kids" | "teen" | "adult" | "elder";
 
@@ -172,6 +173,12 @@ export function useProfiles() {
   useEffect(() => {
     if (!ready) return;
     writeStore({ profiles, activeId });
+    for (const p of profiles) {
+      track("person", p.id, p.name, {
+        age: p.age, country: p.country, role: p.role, subscribed: p.subscribed,
+        streak: p.streak, credits: p.credits, createdAt: p.createdAt,
+      }, 60000);
+    }
   }, [profiles, activeId, ready]);
 
   const active = profiles.find((p) => p.id === activeId) ?? null;

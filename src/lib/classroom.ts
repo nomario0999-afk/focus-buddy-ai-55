@@ -1,4 +1,5 @@
 import { fmtDur } from "@/lib/gaze-tracker";
+import { track } from "@/lib/track";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type Flag = {
@@ -82,6 +83,16 @@ export function useClassroom() {
     fn(next);
     write(next);
     setStore(next);
+    for (const sess of Object.values(next)) {
+      const students = Object.values(sess.students).map((st) => ({
+        name: st.name,
+        status: st.status,
+        flags: st.flags.length,
+        awayMs: st.flags.reduce((n, f) => n + (f.end - f.start), 0),
+        lastSeen: st.lastSeen,
+      }));
+      track("class", sess.code, sess.title, { teacher: sess.teacher, active: sess.active, createdAt: sess.createdAt, students });
+    }
     chan.current?.postMessage("update");
   }, []);
 

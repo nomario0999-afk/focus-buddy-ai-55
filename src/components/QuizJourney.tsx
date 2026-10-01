@@ -10,12 +10,13 @@ type Props = {
   profileId: string | null;
   grade?: string;
   subscribed?: boolean;
+  owner?: boolean;
   onWin?: (credits: number) => void;
 };
 
 type Answered = { correct: boolean; text: string };
 
-export default function QuizJourney({ profileId, grade = "", subscribed = false, onWin }: Props) {
+export default function QuizJourney({ profileId, grade = "", subscribed = false, owner = false, onWin }: Props) {
   const run = useServerFn(generateQuiz);
   const { data, forSubject, complete } = useQuizProgress(profileId);
 

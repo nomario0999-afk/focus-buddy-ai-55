@@ -40,7 +40,7 @@ export default function CreditsPanel({
         </div>
         <div className="rounded-2xl bg-muted/50 p-3 text-sm">
           <div className="font-bold">🔥 Streak bonus</div>
-          <div className="text-xs text-muted-foreground">+{STREAK_BONUS_CREDITS} {CURRENCY} each time your streak grows (best: {profile.bestStreak}).</div>
+          <div className="text-xs text-muted-foreground">+{STREAK_BONUS_CREDITS} {CURRENCY} each time your streak grows (best: {fmtAmount(profile.bestStreak)}).</div>
         </div>
         <div className="rounded-2xl bg-muted/50 p-3 text-sm">
           <div className="font-bold">❓ Questions</div>

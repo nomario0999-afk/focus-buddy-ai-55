@@ -1,17 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { readStore, loadHistory, type Profile } from "@/lib/profiles";
-import { loadRequests, type PayRequest } from "@/lib/billing";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { ownerOverview, type ActivityRow } from "@/lib/owner-sync.functions";
+import { fmtAmount } from "@/lib/owners";
 
-/** Private owner code. Only the owner knows it — change it any time. */
-const OWNER_CODE = "NOMAN-OWNER";
-const UNLOCK_KEY = "focuser.owner.unlocked";
+const CODE_KEY = "focuser.owner.code";
 
 export const Route = createFileRoute("/owner")({
   head: () => ({
     meta: [
       { title: "Owner Board · Focuser" },
-      { name: "description", content: "Private owner board for Focuser: see who uses the app on this device." },
+      { name: "description", content: "Private owner board for Focuser: everyone using the app, classes, reports and Pro activations." },
       { name: "robots", content: "noindex, nofollow" },
       { property: "og:title", content: "Owner Board · Focuser" },
       { property: "og:description", content: "Private owner board for Focuser." },
@@ -22,64 +21,67 @@ export const Route = createFileRoute("/owner")({
   component: OwnerBoard,
 });
 
-type Row = Profile & { sessions: number; minutes: number; avgFocus: number; lastSeen: number };
+type Tab = "people" | "classes" | "reports" | "pro" | "requests";
+
+const fmtMs = (ms: number) => {
+  const s = Math.round(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+};
 
 function OwnerBoard() {
-  const [unlocked, setUnlocked] = useState(false);
+  const fetchOverview = useServerFn(ownerOverview);
   const [code, setCode] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
+  const [rows, setRows] = useState<ActivityRow[]>([]);
   const [error, setError] = useState("");
-  const [rows, setRows] = useState<Row[]>([]);
-  const [requests, setRequests] = useState<PayRequest[]>([]);
+  const [tab, setTab] = useState<Tab>("people");
+
+  const load = useCallback(
+    async (c: string) => {
+      try {
+        const r = await fetchOverview({ data: { code: c } });
+        if (!r.ok) {
+          setError("Wrong owner code.");
+          setSaved(null);
+          localStorage.removeItem(CODE_KEY);
+          return;
+        }
+        setError("");
+        setSaved(c);
+        localStorage.setItem(CODE_KEY, c);
+        setRows(JSON.parse(r.json) as ActivityRow[]);
+      } catch {
+        setError("Could not load right now. Try again.");
+      }
+    },
+    [fetchOverview],
+  );
 
   useEffect(() => {
-    try { if (localStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true); } catch { /* ignore */ }
-  }, []);
+    const c = localStorage.getItem(CODE_KEY);
+    if (c) void load(c);
+  }, [load]);
 
   useEffect(() => {
-    if (!unlocked) return;
-    const load = () => {
-      const store = readStore();
-      setRows(
-        store.profiles
-          .map((p) => {
-            const h = loadHistory(p.id);
-            const minutes = h.reduce((n, e) => n + e.minutes, 0);
-            const avg = h.length ? Math.round(h.reduce((n, e) => n + e.focusScore, 0) / h.length) : 0;
-            return { ...p, sessions: h.length, minutes, avgFocus: avg, lastSeen: h[0]?.at ?? p.createdAt };
-          })
-          .sort((a, b) => b.minutes - a.minutes || b.bestStreak - a.bestStreak),
-      );
-      setRequests(loadRequests());
-    };
-    load();
-    const t = setInterval(load, 4000);
+    if (!saved) return;
+    const t = setInterval(() => void load(saved), 10000);
     return () => clearInterval(t);
-  }, [unlocked]);
+  }, [saved, load]);
 
-  if (!unlocked) {
+  const by = useMemo(() => {
+    const g: Record<string, ActivityRow[]> = { person: [], class: [], pro: [], request: [] };
+    for (const r of rows) (g[r.kind] ??= []).push(r);
+    return g;
+  }, [rows]);
+
+  if (!saved) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
         <h1 className="text-3xl font-black tracking-tight">🔐 Owner board</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Private area. Only the owner can open this page — nobody using the app can see it.
-        </p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (code.trim().toUpperCase() === OWNER_CODE) {
-              try { localStorage.setItem(UNLOCK_KEY, "1"); } catch { /* ignore */ }
-              setUnlocked(true);
-            } else setError("Wrong owner code.");
-          }}
-          className="mt-6 flex gap-2"
-        >
-          <input
-            type="password"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Owner code"
-            className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:border-primary"
-          />
+        <p className="mt-2 text-sm text-muted-foreground">Private area. Only the owner code opens it.</p>
+        <form onSubmit={(e) => { e.preventDefault(); void load(code); }} className="mt-6 flex gap-2">
+          <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Owner code"
+            className="flex-1 rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:border-primary" />
           <button className="rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground">Open</button>
         </form>
         {error && <p className="mt-2 text-sm font-medium text-destructive">{error}</p>}
@@ -87,68 +89,117 @@ function OwnerBoard() {
     );
   }
 
+  const people = by.person ?? [];
+  const classes = by.class ?? [];
+  const reports = classes.flatMap((c) =>
+    ((c.data.students as Array<Record<string, unknown>>) ?? []).map((s) => ({ cls: c, s })),
+  );
+  const teachers = people.filter((p) => p.data.role === "teacher").length;
+  const pros = people.filter((p) => p.data.subscribed).length;
+  const weekAgo = Date.now() - 7 * 864e5;
+  const activeWeek = people.filter((p) => new Date(p.updated_at).getTime() > weekAgo).length;
+
+  const tabs: [Tab, string, number][] = [
+    ["people", "👥 People", people.length],
+    ["classes", "🏫 Teacher classes", classes.length],
+    ["reports", "📋 Student reports", reports.length],
+    ["pro", "⭐ Pro activations", (by.pro ?? []).length],
+    ["requests", "💬 Requests", (by.request ?? []).length],
+  ];
+
+  const cell = "p-3";
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <main className="mx-auto max-w-6xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black tracking-tight">👑 Owner board</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Everyone using Focuser on this device, ranked by focus minutes. Users never see this page.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Everyone using Focuser on any phone or computer. Updates every 10 seconds.</p>
         </div>
-        <button
-          onClick={() => { try { localStorage.removeItem(UNLOCK_KEY); } catch { /* ignore */ } setUnlocked(false); }}
-          className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-muted"
-        >
-          Lock again
-        </button>
+        <button onClick={() => { localStorage.removeItem(CODE_KEY); setSaved(null); }}
+          className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">Lock again</button>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-3xl border border-border bg-card p-2 shadow-[var(--shadow-card)]">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="p-3">#</th><th className="p-3">User</th><th className="p-3">Age / Country</th>
-              <th className="p-3">Sessions</th><th className="p-3">Minutes</th><th className="p-3">Avg focus</th>
-              <th className="p-3">Streak</th><th className="p-3">Focolara</th><th className="p-3">Plan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr><td className="p-4 text-muted-foreground" colSpan={9}>No accounts on this device yet.</td></tr>
-            )}
-            {rows.map((r, i) => (
-              <tr key={r.id} className="border-t border-border">
-                <td className="p-3 font-bold">{i + 1}</td>
-                <td className="p-3 font-semibold">{r.avatar} {r.name} {r.passwordHash ? "🔒" : ""}</td>
-                <td className="p-3 text-muted-foreground">{r.age} · {r.country}</td>
-                <td className="p-3">{r.sessions}</td>
-                <td className="p-3">{r.minutes}</td>
-                <td className="p-3">{r.avgFocus}%</td>
-                <td className="p-3">🔥 {r.streak} (best {r.bestStreak})</td>
-                <td className="p-3">🪙 {r.credits.toLocaleString()}</td>
-                <td className="p-3">{r.subscribed ? "Pro" : "Free"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <h2 className="mt-10 text-xl font-bold tracking-tight">💬 Subscription requests</h2>
-      <div className="mt-3 space-y-2">
-        {requests.length === 0 && <p className="text-sm text-muted-foreground">No requests yet.</p>}
-        {requests.map((r) => (
-          <div key={r.id} className="rounded-2xl border border-border bg-card p-4 text-sm">
-            <div className="font-semibold">{r.name} · {r.contact} · {r.plan === "teacher" ? "Teacher 100 SAR" : "Pro $15"}</div>
-            <div className="text-xs text-muted-foreground">{new Date(r.at).toLocaleString()}</div>
-            {r.message && <p className="mt-1">{r.message}</p>}
+      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+        {[["People in Focuser", people.length], ["Active this week", activeWeek], ["Teachers", teachers], ["Pro users", pros], ["Classes", classes.length]].map(([l, n]) => (
+          <div key={l as string} className="rounded-3xl border border-border bg-card p-4 shadow-[var(--shadow-card)]">
+            <div className="text-3xl font-black">{n}</div>
+            <div className="text-xs text-muted-foreground">{l}</div>
           </div>
         ))}
       </div>
 
-      <p className="mt-8 text-xs text-muted-foreground">
-        This board reads only what is stored in this browser. Passwords are hashed and cannot be shown.
-      </p>
+      <div className="mt-6 flex flex-wrap gap-2">
+        {tabs.map(([k, l, n]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === k ? "bg-primary text-primary-foreground" : "border border-border hover:bg-muted"}`}>
+            {l} ({n})
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 overflow-x-auto rounded-3xl border border-border bg-card p-2 shadow-[var(--shadow-card)]">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          {tab === "people" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Type</th><th className={cell}>Age / Country</th><th className={cell}>Plan</th><th className={cell}>Streak</th><th className={cell}>Focolara</th><th className={cell}>Last seen</th></tr></thead>
+            <tbody>{people.map((p) => (
+              <tr key={p.id} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{p.name || "—"}</td>
+                <td className={cell}>{p.data.role === "teacher" ? "Teacher" : "Student"}</td>
+                <td className={`${cell} text-muted-foreground`}>{String(p.data.age ?? "")} · {String(p.data.country ?? "")}</td>
+                <td className={cell}>{p.data.subscribed ? "Pro" : "Free"}</td>
+                <td className={cell}>🔥 {fmtAmount(Number(p.data.streak ?? 0))}</td>
+                <td className={cell}>🪙 {fmtAmount(Number(p.data.credits ?? 0))}</td>
+                <td className={`${cell} text-muted-foreground`}>{new Date(p.updated_at).toLocaleString()}</td>
+              </tr>))}</tbody>
+          </>)}
+          {tab === "classes" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Class</th><th className={cell}>Code</th><th className={cell}>Teacher</th><th className={cell}>Students</th><th className={cell}>Status</th><th className={cell}>Created</th></tr></thead>
+            <tbody>{classes.map((c) => (
+              <tr key={c.id} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{c.name}</td>
+                <td className={`${cell} font-mono`}>{c.ref}</td>
+                <td className={cell}>{String(c.data.teacher ?? "")}</td>
+                <td className={cell}>{((c.data.students as unknown[]) ?? []).length}</td>
+                <td className={cell}>{c.data.active ? "🟢 Live" : "⏸ Stopped"}</td>
+                <td className={`${cell} text-muted-foreground`}>{new Date(Number(c.data.createdAt) || c.created_at).toLocaleString()}</td>
+              </tr>))}</tbody>
+          </>)}
+          {tab === "reports" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Student</th><th className={cell}>Class</th><th className={cell}>Teacher</th><th className={cell}>Look-away flags</th><th className={cell}>Total away</th><th className={cell}>Status</th></tr></thead>
+            <tbody>{reports.map(({ cls, s }, i) => (
+              <tr key={i} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{String(s.name)}</td>
+                <td className={cell}>{cls.name} ({cls.ref})</td>
+                <td className={cell}>{String(cls.data.teacher ?? "")}</td>
+                <td className={cell}>{Number(s.flags) > 0 ? `🚩 ${s.flags}` : "✅ 0"}</td>
+                <td className={cell}>{fmtMs(Number(s.awayMs) || 0)}</td>
+                <td className={cell}>{String(s.status)}</td>
+              </tr>))}</tbody>
+          </>)}
+          {tab === "pro" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Plan</th><th className={cell}>Contact</th><th className={cell}>Activated</th></tr></thead>
+            <tbody>{(by.pro ?? []).map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{r.name}</td>
+                <td className={cell}>{r.data.plan === "teacher" ? "Teacher 100 SAR" : "Pro $15"}</td>
+                <td className={cell}>{String(r.data.contact ?? "")}</td>
+                <td className={`${cell} text-muted-foreground`}>{new Date(r.created_at).toLocaleString()}</td>
+              </tr>))}</tbody>
+          </>)}
+          {tab === "requests" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Plan</th><th className={cell}>Contact</th><th className={cell}>Message</th><th className={cell}>When</th></tr></thead>
+            <tbody>{(by.request ?? []).map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{r.name}</td>
+                <td className={cell}>{r.data.plan === "teacher" ? "Teacher 100 SAR" : "Pro $15"}</td>
+                <td className={cell}>{String(r.data.contact ?? "")}</td>
+                <td className={cell}>{String(r.data.message ?? "")}</td>
+                <td className={`${cell} text-muted-foreground`}>{new Date(r.created_at).toLocaleString()}</td>
+              </tr>))}</tbody>
+          </>)}
+        </table>
+      </div>
+      <p className="mt-6 text-xs text-muted-foreground">Passwords are never sent here. People who have not opened Focuser since this update will appear the next time they use it.</p>
     </main>
   );
 }

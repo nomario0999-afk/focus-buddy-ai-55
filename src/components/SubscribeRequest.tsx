@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { track } from "@/lib/track";
 import { PAY_NAME, PAY_NUMBER, PAY_NUMBER_ALT, isActivationCode, saveRequest, type PayRequest } from "@/lib/billing";
 
 export default function SubscribeRequest({
@@ -98,7 +99,7 @@ export default function SubscribeRequest({
               className="min-w-52 flex-1 rounded-2xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
             <button
-              onClick={() => (isActivationCode(code) ? onActivated() : setError("That code is not valid yet."))}
+              onClick={() => { if (isActivationCode(code)) { track("pro", `a_${Date.now()}`, name.trim() || "Unknown", { plan, contact: contact.trim() }); onActivated(); } else setError("That code is not valid yet."); }}
               className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
             >
               Activate
