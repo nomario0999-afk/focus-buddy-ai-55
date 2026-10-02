@@ -5,3 +5,12 @@
 - Foco bobbing + speech bubble: already live
 - Billing: payment numbers + activation code in place; real card checkout still not connected
 - "Connect to Google": sign-in + Play Store packaging still open
+- Owner board (all devices: people, classes, reports, Pro, requests): done
+- Real card payments for Pro + Teacher: blocked — needs a paid Lovable plan
+- Feedback option: done
+- Remove games: done (Arcade + Portal Drive removed)
+- Remove XP: done
+- More Pro perks: todo
+- Credits line: done
+- Night theme: done
+- Notify schools/colleges about online exams: todo (needs clarification: email list?)

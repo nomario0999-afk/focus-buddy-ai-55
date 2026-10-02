@@ -21,7 +21,7 @@ export const Route = createFileRoute("/owner")({
   component: OwnerBoard,
 });
 
-type Tab = "people" | "classes" | "reports" | "pro" | "requests";
+type Tab = "people" | "classes" | "reports" | "pro" | "requests" | "feedback";
 
 const fmtMs = (ms: number) => {
   const s = Math.round(ms / 1000);
@@ -69,7 +69,7 @@ function OwnerBoard() {
   }, [saved, load]);
 
   const by = useMemo(() => {
-    const g: Record<string, ActivityRow[]> = { person: [], class: [], pro: [], request: [] };
+    const g: Record<string, ActivityRow[]> = { person: [], class: [], pro: [], request: [], feedback: [] };
     for (const r of rows) (g[r.kind] ??= []).push(r);
     return g;
   }, [rows]);
@@ -105,6 +105,7 @@ function OwnerBoard() {
     ["reports", "📋 Student reports", reports.length],
     ["pro", "⭐ Pro activations", (by.pro ?? []).length],
     ["requests", "💬 Requests", (by.request ?? []).length],
+    ["feedback", "📝 Feedback", (by.feedback ?? []).length],
   ];
 
   const cell = "p-3";
@@ -194,6 +195,15 @@ function OwnerBoard() {
                 <td className={cell}>{r.data.plan === "teacher" ? "Teacher 100 SAR" : "Pro $15"}</td>
                 <td className={cell}>{String(r.data.contact ?? "")}</td>
                 <td className={cell}>{String(r.data.message ?? "")}</td>
+                <td className={`${cell} text-muted-foreground`}>{new Date(r.created_at).toLocaleString()}</td>
+              </tr>))}</tbody>
+          </>)}
+          {tab === "feedback" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Feedback</th><th className={cell}>When</th></tr></thead>
+            <tbody>{(by.feedback ?? []).map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{r.name || "Anonymous"}</td>
+                <td className={cell}>{String(r.data.text ?? "")}</td>
                 <td className={`${cell} text-muted-foreground`}>{new Date(r.created_at).toLocaleString()}</td>
               </tr>))}</tbody>
           </>)}

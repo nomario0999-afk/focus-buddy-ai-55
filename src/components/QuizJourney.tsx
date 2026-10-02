@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { generateQuiz, type QuizQuestion } from "@/lib/quiz.functions";
 import {
-  QUIZ_SUBJECTS, useQuizProgress, rewardForLevel, xpForLevel, accuracyBonus, type SubjectDef,
+  QUIZ_SUBJECTS, useQuizProgress, rewardForLevel, accuracyBonus, type SubjectDef,
 } from "@/lib/quiz-progress";
 import { CURRENCY } from "@/lib/profiles";
 
@@ -108,7 +108,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
                   {s.title} {s.premium && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-primary">PRO</span>}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {locked ? "🔒 Unlock with Pro" : `Level ${p.level} · ⭐ ${p.xp} XP`}
+                  {locked ? "🔒 Unlock with Pro" : `Level ${p.level}`}
                 </div>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full" style={{ width: `${Math.min(p.cleared * 10, 100)}%`, background: "var(--gradient-fun)" }} />
@@ -132,7 +132,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
           <div>
             <h2 className="text-2xl font-black tracking-tight">{subject.emoji} {subject.title}</h2>
             <p className="text-sm text-muted-foreground">
-              10 questions per level · ⭐ {prog?.xp ?? 0} XP · 🏆 {prog?.cleared ?? 0} levels cleared · best accuracy {prog?.bestAccuracy ?? 0}%
+              10 questions per level · 🏆 {prog?.cleared ?? 0} levels cleared · best accuracy {prog?.bestAccuracy ?? 0}%
             </p>
           </div>
           <button onClick={() => setSubject(null)} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">← All subjects</button>
@@ -179,14 +179,13 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
         <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3 text-left sm:grid-cols-4">
           <Stat label="Score" value={`${result.score}/100`} />
           <Stat label="Accuracy" value={`${result.accuracy}%`} />
-          <Stat label="XP" value={`⭐ ${result.xp}`} />
           <Stat label={CURRENCY} value={`💰 ${result.focalera}`} />
         </div>
         {result.accuracy >= 80 && result.passed && (
           <p className="mt-3 text-sm font-bold text-primary">🎉 High-accuracy bonus: +{accuracyBonus(result.accuracy)} {CURRENCY}</p>
         )}
         <p className="mt-3 text-sm text-muted-foreground">
-          {result.passed ? `🔓 Level ${level + 1} unlocked · next reward 💰 ${rewardForLevel(level + 1)} + ⭐ ${xpForLevel(level + 1)} XP` : "Score 60% or more to unlock the next level."}
+          {result.passed ? `🔓 Level ${level + 1} unlocked · next reward 💰 ${rewardForLevel(level + 1)}` : "Score 60% or more to unlock the next level."}
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           {result.passed && (
@@ -312,7 +311,6 @@ function Header({ totalXp, streak, owner }: { totalXp: number; streak: number; o
         </p>
       </div>
       <div className="flex gap-2 text-xs font-bold">
-        <span className="rounded-full bg-muted px-3 py-1.5">⭐ {owner ? "∞" : totalXp} XP</span>
         <span className="rounded-full bg-muted px-3 py-1.5">🔥 {owner ? "∞" : streak} quiz streak</span>
       </div>
     </div>

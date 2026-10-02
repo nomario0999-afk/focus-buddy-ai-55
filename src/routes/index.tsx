@@ -8,8 +8,7 @@ import { summarizeSession } from "@/lib/session-summary.functions";
 import ProfileHub from "@/components/ProfileHub";
 import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
-import PortalDriveGame from "@/components/PortalDriveGame";
-import GameArcade from "@/components/GameArcade";
+import FeedbackBox from "@/components/FeedbackBox";
 import GkChallenges from "@/components/GkChallenges";
 import QuizJourney from "@/components/QuizJourney";
 import { fmtAmount, isOwnerName } from "@/lib/owners";
@@ -992,8 +991,6 @@ function Index() {
             onWin={(c) => addCredits(c)}
           />
           <GkChallenges onWin={(c) => addCredits(c)} lock={gameLock} />
-          <GameArcade onWin={(c) => addCredits(c)} lock={gameLock} />
-          <PortalDriveGame age={Number(profile?.age) || 12} onReward={(c) => addCredits(c)} lock={gameLock} />
         </div>
       </section>
 
@@ -1069,12 +1066,13 @@ function Index() {
           <span>Focus. Learn. Grow.</span>
           <a href="/owner" className="text-xs text-muted-foreground/60 hover:text-foreground">·</a>
         </div>
+        <div className="mx-auto max-w-2xl px-6 pb-6"><FeedbackBox name={profile?.name ?? ""} /></div>
         <div className="px-6 pb-8 text-center">
           <p
             className="text-base font-black tracking-tight text-transparent"
             style={{ background: "var(--gradient-fun)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
           >
-            Founders — made by Muhammad Noman Hussain and Ammar Khan
+            Created by Ammar and Noman
           </p>
         </div>
       </footer>
