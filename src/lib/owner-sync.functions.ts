@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const Kind = z.enum(["person", "class", "report", "pro", "request"]);
+const Kind = z.enum(["person", "class", "report", "pro", "request", "feedback"]);
 
 /** Anyone using Focuser reports activity so the owner can see it from any device. */
 export const reportActivity = createServerFn({ method: "POST" })

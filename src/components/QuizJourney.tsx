@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { generateQuiz, type QuizQuestion } from "@/lib/quiz.functions";
 import {
-  QUIZ_SUBJECTS, useQuizProgress, rewardForLevel, xpForLevel, accuracyBonus, type SubjectDef,
+  QUIZ_SUBJECTS, useQuizProgress, rewardForLevel, accuracyBonus, type SubjectDef,
 } from "@/lib/quiz-progress";
 import { CURRENCY } from "@/lib/profiles";
 
