@@ -5,3 +5,12 @@
 - Foco bobbing + speech bubble: already live
 - Billing: payment numbers + activation code in place; real card checkout still not connected
 - "Connect to Google": sign-in + Play Store packaging still open
+- Owner board (all devices: people, classes, reports, Pro, requests): done
+- Real card payments for Pro + Teacher: blocked — needs a paid Lovable plan
+- Feedback option: todo
+- Remove games/game money: todo
+- Remove XP everywhere (streak only): todo
+- More Pro perks: todo
+- "Created by Ammar and Noman" credits section: todo
+- Black / dark blue / orange theme: todo
+- Notify schools/colleges about online exams: todo (needs clarification: email list?)
