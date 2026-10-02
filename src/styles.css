@@ -202,3 +202,35 @@
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-6px) scale(1.04); }
 }
+
+/* ── Focuser night palette: black, deep blue, dark blue, orange ── */
+:root, .theme-kids, .theme-teen, .theme-adult, .theme-elder {
+  --background: oklch(0.14 0.03 260);
+  --foreground: oklch(0.96 0.01 250);
+  --card: oklch(0.2 0.05 262);
+  --card-foreground: oklch(0.96 0.01 250);
+  --popover: oklch(0.2 0.05 262);
+  --popover-foreground: oklch(0.96 0.01 250);
+  --primary: oklch(0.6 0.19 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.72 0.18 50);
+  --secondary-foreground: oklch(0.15 0.03 260);
+  --muted: oklch(0.26 0.05 262);
+  --muted-foreground: oklch(0.72 0.04 255);
+  --accent: oklch(0.3 0.08 258);
+  --accent-foreground: oklch(0.96 0.01 250);
+  --border: oklch(0.32 0.05 260);
+  --input: oklch(0.32 0.05 260);
+  --ring: oklch(0.72 0.18 50);
+  --gradient-hero: linear-gradient(135deg, oklch(0.16 0.04 260), oklch(0.24 0.09 258));
+  --gradient-fun: linear-gradient(135deg, oklch(0.45 0.17 260), oklch(0.6 0.19 255) 50%, oklch(0.72 0.18 50));
+  --gradient-playful: linear-gradient(120deg, oklch(0.2 0.06 262), oklch(0.26 0.1 258) 55%, oklch(0.32 0.1 50));
+  --shadow-soft: 0 10px 30px -12px oklch(0.72 0.18 50 / 0.35);
+  --shadow-card: 0 6px 24px -10px oklch(0 0 0 / 0.6);
+}
+body {
+  background-image:
+    radial-gradient(45rem 30rem at 8% -5%, oklch(0.5 0.19 258 / 0.3), transparent 60%),
+    radial-gradient(38rem 26rem at 95% 8%, oklch(0.72 0.18 50 / 0.18), transparent 60%),
+    radial-gradient(42rem 30rem at 50% 105%, oklch(0.35 0.12 262 / 0.35), transparent 60%);
+}
