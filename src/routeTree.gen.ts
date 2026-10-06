@@ -9,14 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ProctorRouteImport } from './routes/proctor'
-import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as ProctorRouteImport } from './routes/proctor'
 import { Route as ApiPublicWellKnownAssetlinksRouteImport } from './routes/api/public/well-known/assetlinks'
 
-const ProctorRoute = ProctorRouteImport.update({
-  id: '/proctor',
-  path: '/proctor',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerRoute = OwnerRouteImport.update({
@@ -24,9 +24,9 @@ const OwnerRoute = OwnerRouteImport.update({
   path: '/owner',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const ProctorRoute = ProctorRouteImport.update({
+  id: '/proctor',
+  path: '/proctor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicWellKnownAssetlinksRoute =
@@ -77,11 +77,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/proctor': {
-      id: '/proctor'
-      path: '/proctor'
-      fullPath: '/proctor'
-      preLoaderRoute: typeof ProctorRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/owner': {
@@ -91,11 +91,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/proctor': {
+      id: '/proctor'
+      path: '/proctor'
+      fullPath: '/proctor'
+      preLoaderRoute: typeof ProctorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/well-known/assetlinks': {
