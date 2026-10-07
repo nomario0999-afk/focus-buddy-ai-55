@@ -183,6 +183,12 @@ export function useProfiles() {
 
   const active = profiles.find((p) => p.id === activeId) ?? null;
 
+  useEffect(() => {
+    if (!ready || !active) return;
+    track("signin", `s_${active.id}_${Date.now()}`, active.name, { profileId: active.id, at: Date.now() }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, activeId]);
+
   const updateProfile = useCallback((id: string, patch: Partial<Profile>) => {
     setProfiles((prev) => prev.map((p) => (p.id === id ? normalize({ ...p, ...patch }) : p)));
   }, []);

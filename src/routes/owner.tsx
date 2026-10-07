@@ -21,7 +21,7 @@ export const Route = createFileRoute("/owner")({
   component: OwnerBoard,
 });
 
-type Tab = "people" | "classes" | "reports" | "pro" | "requests" | "feedback";
+type Tab = "people" | "classes" | "reports" | "pro" | "requests" | "feedback" | "signins";
 
 const fmtMs = (ms: number) => {
   const s = Math.round(ms / 1000);
@@ -69,7 +69,7 @@ function OwnerBoard() {
   }, [saved, load]);
 
   const by = useMemo(() => {
-    const g: Record<string, ActivityRow[]> = { person: [], class: [], pro: [], request: [], feedback: [] };
+    const g: Record<string, ActivityRow[]> = { person: [], class: [], pro: [], request: [], feedback: [], signin: [] };
     for (const r of rows) (g[r.kind] ??= []).push(r);
     return g;
   }, [rows]);
@@ -106,7 +106,10 @@ function OwnerBoard() {
     ["pro", "⭐ Pro activations", (by.pro ?? []).length],
     ["requests", "💬 Requests", (by.request ?? []).length],
     ["feedback", "📝 Feedback", (by.feedback ?? []).length],
+    ["signins", "🔑 Sign-ins", (by.signin ?? []).length],
   ];
+  const dayAgo = Date.now() - 864e5;
+  const signinsToday = (by.signin ?? []).filter((r) => new Date(r.created_at).getTime() > dayAgo).length;
 
   const cell = "p-3";
   return (
@@ -120,8 +123,8 @@ function OwnerBoard() {
           className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-muted">Lock again</button>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        {[["People in Focuser", people.length], ["Active this week", activeWeek], ["Teachers", teachers], ["Pro users", pros], ["Classes", classes.length]].map(([l, n]) => (
+      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-6">
+        {[["People in Focuser", people.length], ["Sign-ins today", signinsToday], ["Active this week", activeWeek], ["Teachers", teachers], ["Pro users", pros], ["Classes", classes.length]].map(([l, n]) => (
           <div key={l as string} className="rounded-3xl border border-border bg-card p-4 shadow-[var(--shadow-card)]">
             <div className="text-3xl font-black">{n}</div>
             <div className="text-xs text-muted-foreground">{l}</div>
@@ -204,6 +207,14 @@ function OwnerBoard() {
               <tr key={r.id} className="border-t border-border">
                 <td className={`${cell} font-semibold`}>{r.name || "Anonymous"}</td>
                 <td className={cell}>{String(r.data.text ?? "")}</td>
+                <td className={`${cell} text-muted-foreground`}>{new Date(r.created_at).toLocaleString()}</td>
+              </tr>))}</tbody>
+          </>)}
+          {tab === "signins" && (<>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Signed in at</th></tr></thead>
+            <tbody>{(by.signin ?? []).map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className={`${cell} font-semibold`}>{r.name || "—"}</td>
                 <td className={`${cell} text-muted-foreground`}>{new Date(r.created_at).toLocaleString()}</td>
               </tr>))}</tbody>
           </>)}

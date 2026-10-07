@@ -1066,6 +1066,11 @@ function Index() {
           <span>Focus. Learn. Grow.</span>
           <a href="/owner" className="text-xs text-muted-foreground/60 hover:text-foreground">·</a>
         </div>
+        {isOwnerName(profile?.name) && (
+          <div className="mx-auto max-w-2xl px-6 pb-4">
+            <a href="/owner" className="block rounded-3xl border border-border bg-card p-5 text-center font-bold shadow-[var(--shadow-card)] hover:bg-muted">👑 Owner inbox — feedback, people & sign-ins</a>
+          </div>
+        )}
         <div className="mx-auto max-w-2xl px-6 pb-6"><FeedbackBox name={profile?.name ?? ""} /></div>
         <div className="px-6 pb-8 text-center">
           <p
