@@ -4,7 +4,7 @@ const last = new Map<string, { sig: string; at: number }>();
 
 /** Fire-and-forget: tells the owner board about activity. Never blocks the app. */
 export function track(
-  kind: "person" | "class" | "report" | "pro" | "request" | "feedback",
+  kind: "person" | "class" | "report" | "pro" | "request" | "feedback" | "signin",
   ref: string,
   name: string,
   data: Record<string, unknown> = {},
