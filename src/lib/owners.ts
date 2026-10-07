@@ -1,5 +1,8 @@
 /** The two people who own Focuser. Their accounts are unlimited. */
-export const OWNER_NAMES = ["Muhammad Noman Hussain", "Ammar Khan"] as const;
+export const OWNER_NAMES = [
+  "Muhammad Noman Hussain", "Noman Hussain", "Muhammad Noman", "Noman",
+  "Ammar Khan", "Ammar",
+] as const;
 
 /** Big enough to never run out; still a real number so it saves fine. */
 export const UNLIMITED = 999_999_999;
