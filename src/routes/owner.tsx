@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ownerOverview, type ActivityRow } from "@/lib/owner-sync.functions";
+import { ownerOverview, ownerDelete, type ActivityRow } from "@/lib/owner-sync.functions";
 import { fmtAmount } from "@/lib/owners";
 
 const CODE_KEY = "focuser.owner.code";
@@ -30,6 +30,7 @@ const fmtMs = (ms: number) => {
 
 function OwnerBoard() {
   const fetchOverview = useServerFn(ownerOverview);
+  const removeRow = useServerFn(ownerDelete);
   const [code, setCode] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [rows, setRows] = useState<ActivityRow[]>([]);
