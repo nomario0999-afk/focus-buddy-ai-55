@@ -1,12 +1,11 @@
 # Focuser — open tasks
-- Teacher flow: done (teacher account required to create classes; 100 SAR unlock on the Exam Mode page)
+- Teacher account option and dashboard access: removed; old exam links redirect home, existing records retained
 - Quiz Journey: done (endless levels, fresh AI questions, XP/accuracy/streak/Focolara, map screen, Pro categories)
 - GK quiz: done (8 topics x 3 levels incl. Current Affairs)
 - Foco bobbing + speech bubble: already live
-- Billing: payment numbers + activation code in place; real card checkout still not connected
+- Payment buttons and purchase forms: removed from the app
 - "Connect to Google": sign-in + Play Store packaging still open
 - Owner board (all devices: people, classes, reports, Pro, requests): done
-- Real card payments for Pro + Teacher: blocked — needs a paid Lovable plan
 - Feedback option: done
 - Remove games: done (Arcade + Portal Drive removed)
 - Remove XP: done

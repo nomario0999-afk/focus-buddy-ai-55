@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SubscribeRequest from "@/components/SubscribeRequest";
 import { TEACHER_PRICE } from "@/lib/billing";
@@ -7,6 +7,7 @@ import { useProfiles } from "@/lib/profiles";
 import { makeCode, summarizeCsv, useClassroom, type ExamSession, type Flag } from "@/lib/classroom";
 
 export const Route = createFileRoute("/proctor")({
+  beforeLoad: () => { throw redirect({ to: "/" }); },
   component: ProctorPage,
   head: () => ({
     meta: [

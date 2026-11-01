@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep the legacy exam URL redirecting to the study home page so removed teacher/payment screens cannot be opened from old links; retain existing records.

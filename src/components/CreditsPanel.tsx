@@ -1,14 +1,13 @@
 import {
-  CURRENCY, GAME_WIN_CREDITS, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, STREAK_BONUS_CREDITS, SUBSCRIPTION_PRICE,
+  CURRENCY, GAME_WIN_CREDITS, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, STREAK_BONUS_CREDITS,
   type Profile,
 } from "@/lib/profiles";
 import { fmtAmount, isOwnerName } from "@/lib/owners";
 
 export default function CreditsPanel({
-  profile, onSubscribe,
+  profile,
 }: {
   profile: Profile;
-  onSubscribe: () => void;
 }) {
   const owner = isOwnerName(profile.name);
   const pct = owner ? 100 : Math.max(0, Math.min(100, (profile.credits / (profile.subscribed ? MONTHLY_PRO_CREDITS : MONTHLY_FREE_CREDITS)) * 100));
@@ -51,29 +50,11 @@ export default function CreditsPanel({
       {profile.subscribed ? (
         <div className="mt-4 rounded-2xl border border-border p-4 text-sm">
           <span className="font-bold">✅ Focuser Pro active</span> — {MONTHLY_PRO_CREDITS.toLocaleString()} {CURRENCY} per month.
-          <button onClick={onSubscribe} className="ml-3 text-xs font-semibold text-muted-foreground underline">Cancel</button>
           <p className="mt-2 text-xs text-muted-foreground">
             No refunds on cancel: your payment is not returned and {CURRENCY} already given is never refunded or taken back.
           </p>
         </div>
-      ) : (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-[2px]" style={{ background: "var(--gradient-fun)" }}>
-          <div className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl bg-card p-4">
-            <div>
-              <div className="text-sm font-black">Out of {CURRENCY}? Go Pro 🚀</div>
-              <div className="text-xs text-muted-foreground">
-                {SUBSCRIPTION_PRICE} / month → {MONTHLY_PRO_CREDITS.toLocaleString()} {CURRENCY} every month.
-              </div>
-            </div>
-            <button onClick={onSubscribe} className="rounded-full px-5 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)] hover:opacity-90" style={{ background: "var(--gradient-fun)" }}>
-              Subscribe for {SUBSCRIPTION_PRICE}
-            </button>
-            <p className="w-full text-xs text-muted-foreground">
-              Billed monthly. If you cancel, there is no money refund and no {CURRENCY} refund.
-            </p>
-          </div>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
