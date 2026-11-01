@@ -1,3 +1,4 @@
+import { createGazeTracker } from "@/lib/gaze-tracker";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -122,13 +123,16 @@ const AUDIENCES: CardItem[] = [
 ];
 
 function formatTime(s: number) {
-  const m = Math.floor(s / 60).toString().padStart(2, "0");
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60).toString().padStart(2, "0");
   const sec = (s % 60).toString().padStart(2, "0");
-  return `${m}:${sec}`;
+  return h > 0 ? `${h}:${m}:${sec}` : `${m}:${sec}`;
 }
 
 function Index() {
   const [mode, setMode] = useState<Mode>("focus");
+  const [focusMinutes, setFocusMinutes] = useState(25);
+  const dur = (m: Mode) => (m === "focus" ? focusMinutes * 60 : DURATIONS[m]);
   const [secondsLeft, setSecondsLeft] = useState(DURATIONS.focus);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
@@ -335,7 +339,7 @@ function Index() {
 
   const switchMode = (m: Mode) => {
     setMode(m);
-    setSecondsLeft(DURATIONS[m]);
+    setSecondsLeft(dur(m));
     setRunning(false);
     setWarningLevel(0);
     checksRef.current = 0;
@@ -428,10 +432,12 @@ function Index() {
     return canvas.toDataURL("image/jpeg", 0.6);
   }, []);
 
+  const checkingRef = useRef(false);
   const doFocusCheck = useCallback(async () => {
-    if (isChecking) return;
+    if (checkingRef.current) return;
     const img = captureFrame();
     if (!img) return;
+    checkingRef.current = true;
     setIsChecking(true);
     if (recordEnabled) framesRef.current = [...framesRef.current, img].slice(-6);
     try {
@@ -440,7 +446,10 @@ function Index() {
       checksRef.current += 1;
       if (!result.focused) distractionsRef.current += 1;
       if (result.focused) {
-        setWarningLevel(0);
+        setWarningLevel((lvl) => {
+          if (lvl === 1 || lvl === 2) { setRunning(true); speak("Great, you're back. Timer resumed."); }
+          return 0;
+        });
       } else {
         setWarningLevel((lvl) => {
           const next = Math.min(lvl + 1, 3);
@@ -449,11 +458,12 @@ function Index() {
             beep();
             speak("Hey! Foco noticed you're not focusing. Timer paused. Get back to work or the session ends.");
           } else if (next === 2) {
+            setRunning(false);
             beep();
             speak("Final warning! Focus now, or your streak will be lost.");
           } else if (next === 3) {
             setRunning(false);
-            setSecondsLeft(DURATIONS[mode]);
+            setSecondsLeft(dur(mode));
             resetStreak();
             beep();
             speak("Streak reset. Try again when you're ready.");
@@ -464,25 +474,39 @@ function Index() {
     } catch (e) {
       console.warn("Focus check failed", e);
     } finally {
+      checkingRef.current = false;
       setIsChecking(false);
     }
-  }, [captureFrame, runCheck, isChecking, beep, speak, mode, resetStreak, recordEnabled]);
+  }, [captureFrame, runCheck, beep, speak, mode, resetStreak, recordEnabled]);
 
   // Interval: run check every 20s while focused session is running and cam on
+  // Keeps checking while paused by a warning, so the final warning and session end still happen.
+  const watching = camOn && monitoring && mode === "focus" && (running || warningLevel === 1 || warningLevel === 2);
+  const doCheckRef = useRef(doFocusCheck);
+  doCheckRef.current = doFocusCheck;
   useEffect(() => {
-    if (!camOn || !monitoring || !running || mode !== "focus") return;
-    // First check after 8s so the user has a moment to settle in
-    const first = setTimeout(() => { void doFocusCheck(); }, 8000);
-    checkTimerRef.current = setInterval(() => { void doFocusCheck(); }, 20000);
+    if (!watching) return;
+    const first = setTimeout(() => { void doCheckRef.current(); }, 4000);
+    checkTimerRef.current = setInterval(() => { void doCheckRef.current(); }, 10000);
+    // Fast on-device check: if no face is visible (left the room), ask the AI right away.
+    const tracker = createGazeTracker();
+    let missing = 0;
+    const quick = setInterval(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      missing = tracker.sample(v).reason === "Face not visible" ? missing + 1 : 0;
+      if (missing >= 2) { missing = 0; void doCheckRef.current(); }
+    }, 2000);
     return () => {
       clearTimeout(first);
+      clearInterval(quick);
       if (checkTimerRef.current) clearInterval(checkTimerRef.current);
     };
-  }, [camOn, monitoring, running, mode, doFocusCheck]);
+  }, [watching]);
 
   // Generate an AI study-session summary when a focus session completes
   const finishSession = useCallback(async () => {
-    const minutes = Math.round(DURATIONS.focus / 60);
+    const minutes = focusMinutes;
     const checks = checksRef.current;
     const distractions = distractionsRef.current;
     const questions = chat.filter((m) => m.role === "user").slice(-5).map((m) => m.content);
@@ -517,7 +541,7 @@ function Index() {
     checksRef.current = 0;
     distractionsRef.current = 0;
     framesRef.current = [];
-  }, [chat, subject, grade, streak, runSummarize, saveHistory, recordEnabled]);
+  }, [chat, subject, grade, streak, runSummarize, saveHistory, recordEnabled, focusMinutes]);
 
   useEffect(() => {
     if (mode !== "focus") return;
@@ -527,7 +551,7 @@ function Index() {
     void finishSession();
   }, [secondsLeft, mode, finishSession]);
 
-  const progress = 1 - secondsLeft / DURATIONS[mode];
+  const progress = Math.max(0, 1 - secondsLeft / dur(mode));
   const circumference = 2 * Math.PI * 130;
 
   const warningTone =
@@ -588,7 +612,7 @@ function Index() {
             </a>
           </div>
           <div className="mt-8 flex flex-wrap gap-6 text-sm text-muted-foreground">
-            <div><span className="text-2xl font-bold text-foreground">25</span> min sessions</div>
+            <div><span className="text-2xl font-bold text-foreground">25m–24h</span> sessions</div>
             <div><span className="text-2xl font-bold text-foreground">6</span> smart tools</div>
             <div><span className="text-2xl font-bold text-foreground">100%</span> student-safe</div>
           </div>
@@ -649,6 +673,24 @@ function Index() {
               ))}
             </div>
           </div>
+
+          {mode === "focus" && (
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2 text-sm">
+              <span className="font-semibold">Session length:</span>
+              {[25, 45, 60, 120, 240, 480, 1440].map((m) => (
+                <button key={m} disabled={running} onClick={() => { setFocusMinutes(m); setSecondsLeft(m * 60); }}
+                  className={`rounded-full border px-3 py-1 font-semibold disabled:opacity-50 ${focusMinutes === m ? "border-primary bg-accent" : "border-border hover:bg-muted"}`}>
+                  {m < 60 ? `${m}m` : `${m / 60}h`}
+                </button>
+              ))}
+              <label className="flex items-center gap-1">
+                <input type="number" min={25} max={1440} disabled={running} value={focusMinutes}
+                  onChange={(e) => { const v = Math.min(1440, Math.max(25, Math.round(Number(e.target.value) || 25))); setFocusMinutes(v); setSecondsLeft(v * 60); }}
+                  className="w-20 rounded-full border border-border bg-card px-3 py-1" /> min
+              </label>
+              <span className="w-full text-center text-xs text-muted-foreground">Minimum 25 minutes, maximum 24 hours.</span>
+            </div>
+          )}
 
           <div className="flex flex-col items-center gap-6 py-6">
             <div className="relative flex h-72 w-72 items-center justify-center">

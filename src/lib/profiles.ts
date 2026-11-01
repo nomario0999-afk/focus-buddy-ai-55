@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { isOwnerName, UNLIMITED } from "@/lib/owners";
 import { track } from "@/lib/track";
+import { forgetPerson } from "@/lib/owner-sync.functions";
 
 export type ThemeKey = "auto" | "kids" | "teen" | "adult" | "elder";
 
@@ -206,6 +207,7 @@ export function useProfiles() {
 
   const removeProfile = useCallback((id: string) => {
     try { localStorage.removeItem(historyKey(id)); } catch { /* ignore */ }
+    void forgetPerson({ data: { ref: id } }).catch(() => {});
     setProfiles((prev) => {
       const next = prev.filter((p) => p.id !== id);
       setActiveId((cur) => (cur === id ? next[0]?.id ?? null : cur));

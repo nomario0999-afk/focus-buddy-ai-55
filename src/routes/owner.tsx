@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ownerOverview, type ActivityRow } from "@/lib/owner-sync.functions";
+import { ownerOverview, ownerDelete, type ActivityRow } from "@/lib/owner-sync.functions";
 import { fmtAmount } from "@/lib/owners";
 
 const CODE_KEY = "focuser.owner.code";
@@ -30,6 +30,7 @@ const fmtMs = (ms: number) => {
 
 function OwnerBoard() {
   const fetchOverview = useServerFn(ownerOverview);
+  const removeRow = useServerFn(ownerDelete);
   const [code, setCode] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
   const [rows, setRows] = useState<ActivityRow[]>([]);
@@ -89,7 +90,7 @@ function OwnerBoard() {
     );
   }
 
-  const people = by.person ?? [];
+  const people = (by.person ?? []).filter((p) => (p.name ?? "").trim());
   const classes = by.class ?? [];
   const reports = classes.flatMap((c) =>
     ((c.data.students as Array<Record<string, unknown>>) ?? []).map((s) => ({ cls: c, s })),
@@ -144,7 +145,7 @@ function OwnerBoard() {
       <div className="mt-4 overflow-x-auto rounded-3xl border border-border bg-card p-2 shadow-[var(--shadow-card)]">
         <table className="w-full min-w-[640px] text-left text-sm">
           {tab === "people" && (<>
-            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Type</th><th className={cell}>Age / Country</th><th className={cell}>Plan</th><th className={cell}>Streak</th><th className={cell}>Focolara</th><th className={cell}>Last seen</th></tr></thead>
+            <thead className="text-xs uppercase text-muted-foreground"><tr><th className={cell}>Name</th><th className={cell}>Type</th><th className={cell}>Age / Country</th><th className={cell}>Plan</th><th className={cell}>Streak</th><th className={cell}>Focolara</th><th className={cell}>Last seen</th><th className={cell}></th></tr></thead>
             <tbody>{people.map((p) => (
               <tr key={p.id} className="border-t border-border">
                 <td className={`${cell} font-semibold`}>{p.name || "—"}</td>
@@ -154,6 +155,7 @@ function OwnerBoard() {
                 <td className={cell}>🔥 {fmtAmount(Number(p.data.streak ?? 0))}</td>
                 <td className={cell}>🪙 {fmtAmount(Number(p.data.credits ?? 0))}</td>
                 <td className={`${cell} text-muted-foreground`}>{new Date(p.updated_at).toLocaleString()}</td>
+                <td className={cell}><button onClick={async () => { if (!saved || !confirm(`Remove ${p.name || "this account"} from the board?`)) return; await removeRow({ data: { code: saved, id: p.id } }); void load(saved); }} className="rounded-full border border-border px-3 py-1 text-xs font-semibold hover:bg-muted">🗑 Remove</button></td>
               </tr>))}</tbody>
           </>)}
           {tab === "classes" && (<>
