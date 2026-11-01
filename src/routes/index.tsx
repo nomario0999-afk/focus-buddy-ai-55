@@ -541,7 +541,7 @@ function Index() {
     checksRef.current = 0;
     distractionsRef.current = 0;
     framesRef.current = [];
-  }, [chat, subject, grade, streak, runSummarize, saveHistory, recordEnabled]);
+  }, [chat, subject, grade, streak, runSummarize, saveHistory, recordEnabled, focusMinutes]);
 
   useEffect(() => {
     if (mode !== "focus") return;

@@ -53,3 +53,28 @@ export const ownerOverview = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const, json: JSON.stringify(rows ?? []) };
   });
+
+
+/** Removes a deleted account from the owner board (and its sign-ins). */
+export const forgetPerson = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ref: z.string().min(3).max(80) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("app_activity" as never).delete().eq("kind", "person").eq("ref", data.ref);
+    await supabaseAdmin.from("app_activity" as never).delete().eq("kind", "signin").like("ref", `s_${data.ref}_%`);
+    return { ok: true };
+  });
+
+/** Owner only: delete any row from the board. */
+export const ownerDelete = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ code: z.string().max(60), id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { OWNER_CODE } = await import("./owner-sync.server");
+    if (data.code.trim().toUpperCase() !== OWNER_CODE) return { ok: false };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin.from("app_activity" as never).select("kind,ref").eq("id", data.id).maybeSingle();
+    await supabaseAdmin.from("app_activity" as never).delete().eq("id", data.id);
+    const r = row as { kind?: string; ref?: string } | null;
+    if (r?.kind === "person" && r.ref) await supabaseAdmin.from("app_activity" as never).delete().eq("kind", "signin").like("ref", `s_${r.ref}_%`);
+    return { ok: true };
+  });
