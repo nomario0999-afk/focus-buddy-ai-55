@@ -1,10 +1,9 @@
 import { fmtAmount, isOwnerName } from "@/lib/owners";
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  AVATARS, verifyPassword, MONTHLY_FREE_CREDITS, MONTHLY_PRO_CREDITS, SUBSCRIPTION_PRICE,
+  AVATARS, verifyPassword, MONTHLY_FREE_CREDITS,
   type Profile, type ThemeKey,
 } from "@/lib/profiles";
 
@@ -57,7 +56,7 @@ function ProfileForm({
       if (pw !== confirm2) return setError("The two passwords do not match.");
     }
     setError(null);
-    onSubmit({ ...v, name: v.name.trim().slice(0, 60), country: v.country.trim().slice(0, 60) });
+    onSubmit({ ...v, role: "student", name: v.name.trim().slice(0, 60), country: v.country.trim().slice(0, 60) });
   };
 
   return (
@@ -110,28 +109,6 @@ function ProfileForm({
             <option value="">Year</option>
             {Array.from({ length: 110 }, (_, i) => String(new Date().getFullYear() - i)).map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-        </div>
-      </fieldset>
-
-      <fieldset className="sm:col-span-2">
-        <legend className="text-sm font-semibold">I am a…</legend>
-        <div className="mt-1 grid gap-2 sm:grid-cols-2">
-          {([
-            { key: "student", label: "🎒 Student", hint: "Timer, tutor, games and streaks" },
-            { key: "teacher", label: "🍎 Teacher", hint: "Class dashboard and exam mode" },
-          ] as const).map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              onClick={() => set("role", r.key)}
-              className={`rounded-2xl border p-3 text-left transition ${
-                v.role === r.key ? "border-primary bg-accent" : "border-border hover:bg-muted"
-              }`}
-            >
-              <div className="text-sm font-bold">{r.label}</div>
-              <div className="text-xs font-normal text-muted-foreground">{r.hint}</div>
-            </button>
-          ))}
         </div>
       </fieldset>
 
@@ -352,7 +329,7 @@ export default function ProfileHub({
               {active.age} years old · {active.country} · 🎂 {active.day} {active.month} {active.year}
             </p>
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-3 py-0.5 text-xs font-bold">
-              {active.role === "teacher" ? "🍎 Teacher account" : "🎒 Student account"}
+              🎒 Student account
             </span>
             {isOwnerName(active.name) && (
               <span className="mt-1 ml-2 inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-black text-primary-foreground" style={{ background: "var(--gradient-fun)" }}>
@@ -364,11 +341,6 @@ export default function ProfileHub({
             <span className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground">
               🪙 {fmtAmount(active.credits)} credits
             </span>
-            {active.role === "teacher" && (
-              <Link to="/proctor" className="rounded-full px-4 py-2 text-sm font-bold text-primary-foreground shadow-[var(--shadow-soft)]" style={{ background: "var(--gradient-fun)" }}>
-                🏫 Teacher dashboard
-              </Link>
-            )}
             <button onClick={() => setView("settings")} className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-accent">⚙️ Settings</button>
           </div>
         </div>
@@ -402,7 +374,7 @@ export default function ProfileHub({
         )}
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Free plan: {MONTHLY_FREE_CREDITS} credits every month. Pro ({SUBSCRIPTION_PRICE}/month): {MONTHLY_PRO_CREDITS.toLocaleString()} credits.
+          {MONTHLY_FREE_CREDITS} Focolara every month.
         </p>
       </div>
     </div>

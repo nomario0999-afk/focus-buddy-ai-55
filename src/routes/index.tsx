@@ -12,18 +12,24 @@ import FeedbackBox from "@/components/FeedbackBox";
 import GkChallenges from "@/components/GkChallenges";
 import QuizJourney from "@/components/QuizJourney";
 import { fmtAmount, isOwnerName } from "@/lib/owners";
-import SubscribeRequest from "@/components/SubscribeRequest";
-import { PRO_PRICE } from "@/lib/billing";
 import { useGameUnlocks } from "@/lib/game-unlocks";
 import ExpandableCards, { type CardItem } from "@/components/ExpandableCards";
 import {
   useProfiles, resolvedTheme, loadHistory, saveHistoryList,
-  STREAK_BONUS_CREDITS, MONTHLY_PRO_CREDITS, hashPassword,
+  STREAK_BONUS_CREDITS, hashPassword,
   type HistoryEntry,
 } from "@/lib/profiles";
 
 export const Route = createFileRoute("/")({
   component: Index,
+  head: () => ({ meta: [
+    { title: "Focuser — Focus Timer & AI Study Quizzes" },
+    { name: "description", content: "Study with Foco using a focus timer, AI tutor, progressive quizzes and personal streaks." },
+    { property: "og:title", content: "Focuser — Focus Timer & AI Study Quizzes" },
+    { property: "og:description", content: "Your focus timer, AI study companion, quizzes and streaks in one place." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }),
 });
 
 type Mode = "focus" | "short" | "long";
@@ -246,7 +252,7 @@ function Index() {
     if (!q || askLoading) return;
     // The tutor is only ever blocked by one thing: running out of Focolara.
     if (profile && profile.credits < 1) {
-      setAskError("You're out of Focolara — subscribe to Focuser Pro for $15/month to get 500,000 Focolara.");
+      setAskError("You're out of Focolara — earn more through quizzes or focus streaks, or wait for your monthly refill.");
       return;
     }
     setAskError(null);
@@ -549,7 +555,6 @@ function Index() {
           <a href="#games" className="hover:text-foreground">Games</a>
           <a href="#account" className="hover:text-foreground">Account</a>
           <a href="#safety" className="hover:text-foreground">Safety</a>
-          <a href="/proctor" className="hover:text-foreground">Exam Mode</a>
         </nav>
         <a
           href="#account"
@@ -622,34 +627,7 @@ function Index() {
             onUpdate={updateProfile}
             onDelete={removeProfile}
           />
-          {profile && (
-            <CreditsPanel
-              profile={profile}
-              onSubscribe={() => {
-                if (profile.subscribed) {
-                  // Cancelling is final: no money refund and no Focolara refund.
-                  const ok = confirm(
-                    "Cancel Focuser Pro?\n\nNo refunds: you will not get your money back, and the Focolara you already received will not be refunded or returned.\n\nYou keep any Focolara left in your balance, but next month you go back to the free 100 Focolara.",
-                  );
-                  if (!ok) return;
-                  patchActive({ subscribed: false });
-                  return;
-                }
-                document.getElementById("subscribe-request")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            />
-          )}
-          {profile && !profile.subscribed && (
-            <div id="subscribe-request">
-              <SubscribeRequest
-                plan="pro"
-                price={PRO_PRICE}
-                title="Want Focuser Pro? Message us first 💬"
-                blurb="No live chat — send this short message. You get our payment number, pay by number, and we send you an activation code."
-                onActivated={() => patchActive({ subscribed: true, credits: profile.credits + MONTHLY_PRO_CREDITS })}
-              />
-            </div>
-          )}
+          {profile && <CreditsPanel profile={profile} />}
         </div>
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-10">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
