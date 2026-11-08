@@ -29,7 +29,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Answered[]>([]);
   const [reveal, setReveal] = useState<Answered | null>(null);
-  const [result, setResult] = useState<null | { score: number; accuracy: number; xp: number; focalera: number; passed: boolean }>(null);
+  const [result, setResult] = useState<null | { score: number; accuracy: number; focalera: number; passed: boolean }>(null);
 
   // per-question working state
   const [typed, setTyped] = useState("");
@@ -78,7 +78,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
     if (!subject) return;
     const out = complete(subject.id, level, accuracy, questions.map((q) => q.q));
     if (out.focalera > 0) onWin?.(out.focalera);
-    setResult({ score, accuracy, xp: out.xp, focalera: out.focalera, passed: out.passed });
+    setResult({ score, accuracy, focalera: out.focalera, passed: out.passed });
   }, [index, questions, answers, subject, level, complete, onWin]);
 
   const backToMap = () => { setQuestions([]); setResult(null); setError(null); setReveal(null); };
@@ -90,7 +90,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
   if (!subject) {
     return (
       <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-card)] md:p-8">
-        <Header totalXp={data.totalXp} streak={data.quizStreak} owner={owner} />
+        <Header streak={data.quizStreak} owner={owner} />
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {QUIZ_SUBJECTS.map((s) => {
             const p = forSubject(s.id);
@@ -180,7 +180,25 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
           <Stat label="Score" value={`${result.score}/100`} />
           <Stat label="Accuracy" value={`${result.accuracy}%`} />
           <Stat label={CURRENCY} value={`💰 ${result.focalera}`} />
+          <Stat label="Stars" value={"⭐".repeat(result.accuracy >= 90 ? 3 : result.accuracy >= 70 ? 2 : result.accuracy >= 60 ? 1 : 0) || "—"} />
         </div>
+        <details className="mx-auto mt-5 max-w-xl rounded-2xl border border-border bg-muted/40 p-4 text-left" open>
+          <summary className="cursor-pointer text-sm font-bold">📝 What you did — {answers.filter((a) => a.correct).length}/{questions.length} correct</summary>
+          <ol className="mt-3 space-y-3">
+            {questions.map((q, i) => {
+              const a = answers[i];
+              const right = q.type === "match" ? "All pairs matched" : typeof q.answer === "number" ? (q.options[q.answer] ?? String(q.answer)) : q.answer;
+              return (
+                <li key={i} className="rounded-xl border border-border bg-card p-3 text-sm">
+                  <p className="font-semibold">{a?.correct ? "✅" : "❌"} {i + 1}. {q.q}</p>
+                  <p className="mt-1 text-muted-foreground">Your answer: <span className="font-semibold text-foreground">{a?.text || "—"}</span></p>
+                  {!a?.correct && <p className="text-primary">Correct answer: <span className="font-semibold">{right}</span></p>}
+                  {q.explain && <p className="mt-1 text-xs text-muted-foreground">💡 {q.explain}</p>}
+                </li>
+              );
+            })}
+          </ol>
+        </details>
         {result.accuracy >= 80 && result.passed && (
           <p className="mt-3 text-sm font-bold text-primary">🎉 High-accuracy bonus: +{accuracyBonus(result.accuracy)} {CURRENCY}</p>
         )}
@@ -301,7 +319,7 @@ export default function QuizJourney({ profileId, grade = "", subscribed = false,
   );
 }
 
-function Header({ totalXp, streak, owner }: { totalXp: number; streak: number; owner?: boolean }) {
+function Header({ streak, owner }: { streak: number; owner?: boolean }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
