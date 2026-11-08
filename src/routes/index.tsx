@@ -447,7 +447,7 @@ function Index() {
       if (!result.focused) distractionsRef.current += 1;
       if (result.focused) {
         setWarningLevel((lvl) => {
-          if (lvl === 1 || lvl === 2) { setRunning(true); speak("Great, you're back. Timer resumed."); }
+          if (lvl === 1 || lvl === 2) { setRunning(true); }
           return 0;
         });
       } else {
@@ -456,11 +456,9 @@ function Index() {
           if (next === 1) {
             setRunning(false);
             beep();
-            speak("Hey! Foco noticed you're not focusing. Timer paused. Get back to work or the session ends.");
           } else if (next === 2) {
             setRunning(false);
             beep();
-            speak("Final warning! Focus now, or your streak will be lost.");
           } else if (next === 3) {
             setRunning(false);
             setSecondsLeft(dur(mode));

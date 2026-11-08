@@ -1,4 +1,6 @@
 # Focuser — open tasks
+- One-minute motion-graphics ad: rendered and delivered
+- Foco voice rule: done — Foco stays silent during sessions (beeps only), speaks only when a session ends
 - Teacher account option and dashboard access: removed; old exam links redirect home, existing records retained
 - Quiz Journey: done (endless levels, fresh AI questions, XP/accuracy/streak/Focolara, map screen, Pro categories)
 - GK quiz: done (8 topics x 3 levels incl. Current Affairs)
