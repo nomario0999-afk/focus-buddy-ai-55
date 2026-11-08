@@ -207,6 +207,13 @@ function Index() {
   const [micSupported, setMicSupported] = useState(false);
   const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
 
+  // Wake word: say "Foco" and he answers, like Siri.
+  const [wakeOn, setWakeOn] = useState(false);
+  const [wakeSupported, setWakeSupported] = useState(false);
+  const wakeRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const wakeOnRef = useRef(false);
+  const handleWakeRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
@@ -239,6 +246,48 @@ function Index() {
     if (listening) { try { rec.stop(); } catch { /* ignore */ } setListening(false); return; }
     try { rec.start(); setListening(true); } catch { setListening(false); }
   }, [listening]);
+
+  // Continuous listener for the wake word "Foco" (and common mishearings).
+  useEffect(() => {
+    const w = window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) return;
+    setWakeSupported(true);
+    const rec = new Ctor() as unknown as {
+      lang: string; interimResults: boolean; continuous: boolean;
+      start: () => void; stop: () => void;
+      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>>; resultIndex: number }) => void) | null;
+      onend: (() => void) | null;
+      onerror: (() => void) | null;
+    };
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.continuous = true;
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript.toLowerCase();
+        if (/\b(foco|foko|fokko|fuko|poco|focus)\b/.test(t)) {
+          handleWakeRef.current();
+          break;
+        }
+      }
+    };
+    rec.onend = () => {
+      // Browsers stop continuous recognition after a while; restart while enabled.
+      if (wakeOnRef.current) { try { rec.start(); } catch { /* ignore */ } }
+    };
+    rec.onerror = () => { /* onend restarts */ };
+    wakeRef.current = rec;
+    return () => { wakeOnRef.current = false; try { rec.stop(); } catch { /* ignore */ } wakeRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    wakeOnRef.current = wakeOn;
+    const rec = wakeRef.current;
+    if (!rec) return;
+    if (wakeOn) { try { rec.start(); } catch { /* ignore */ } }
+    else { try { rec.stop(); } catch { /* ignore */ } }
+  }, [wakeOn]);
 
   useEffect(() => {
     try {
@@ -404,6 +453,15 @@ function Index() {
       window.speechSynthesis.speak(u);
     } catch { /* ignore */ }
   }, []);
+
+  // Wake word reply: Foco only talks before or after a session, never while you study.
+  const questionInputRef = useRef<HTMLInputElement | null>(null);
+  const handleWake = useCallback(() => {
+    if (running) return; // silent during a focus session
+    speak(`Yes? I'm here. Ask me anything about ${subject.trim() || "your subject"}.`);
+    questionInputRef.current?.focus();
+  }, [running, subject, speak]);
+  useEffect(() => { handleWakeRef.current = handleWake; }, [handleWake]);
 
   const beep = useCallback(() => {
     try {
@@ -896,6 +954,7 @@ function Index() {
               className="mt-3 flex gap-2"
             >
               <input
+                ref={questionInputRef}
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value.slice(0, 2000))}
@@ -923,6 +982,28 @@ function Index() {
                 Ask
               </button>
             </form>
+
+            <div className="mt-3 flex items-center justify-between rounded-2xl border border-border bg-muted/40 px-4 py-2">
+              <div>
+                <div className="text-sm font-semibold">🗣️ Say "Foco" to wake him</div>
+                <div className="text-xs text-muted-foreground">
+                  {wakeSupported
+                    ? "Like Siri — say \"Foco\" and he answers. He stays quiet while you study."
+                    : "Voice wake-up isn't supported in this browser (try Chrome or Edge)."}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWakeOn((v) => !v)}
+                disabled={!wakeSupported}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
+                  wakeOn ? "text-primary-foreground" : "border border-border hover:bg-muted"
+                }`}
+                style={wakeOn ? { background: "var(--gradient-fun)" } : undefined}
+              >
+                {wakeOn ? "● Listening for \"Foco\"" : "Turn on"}
+              </button>
+            </div>
           </div>
         </div>
       </section>
