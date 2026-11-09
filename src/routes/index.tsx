@@ -261,7 +261,7 @@ function Index() {
       start: () => void; stop: () => void;
       onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>>; resultIndex: number }) => void) | null;
       onend: (() => void) | null;
-      onerror: (() => void) | null;
+      onerror: ((e: { error?: string }) => void) | null;
     };
     rec.lang = "en-US";
     rec.interimResults = false;
