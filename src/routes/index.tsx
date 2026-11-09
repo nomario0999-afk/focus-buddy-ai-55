@@ -213,6 +213,9 @@ function Index() {
   const wakeRef = useRef<{ start: () => void; stop: () => void } | null>(null);
   const wakeOnRef = useRef(false);
   const handleWakeRef = useRef<() => void>(() => {});
+  const [wakeHeard, setWakeHeard] = useState("");
+  const [wakeError, setWakeError] = useState("");
+  const lastWakeAt = useRef(0);
 
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never };
@@ -224,10 +227,10 @@ function Index() {
       start: () => void; stop: () => void;
       onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
       onend: (() => void) | null;
-      onerror: (() => void) | null;
+      onerror: ((e: { error?: string }) => void) | null;
     };
     rec.lang = "en-US";
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.continuous = false;
     rec.onresult = (e) => {
       let text = "";
@@ -266,7 +269,10 @@ function Index() {
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript.toLowerCase();
-        if (/\b(foco|foko|fokko|fuko|poco|focus)\b/.test(t)) {
+        setWakeHeard(t);
+        if (/(fo+ ?c|fo+ ?k|fu ?k|phok|phoc|photo|poco|poko|coco|focus|folk|fork|four ?co|for ?co|faux ?co)/.test(t)) {
+          if (Date.now() - lastWakeAt.current < 4000) break;
+          lastWakeAt.current = Date.now();
           handleWakeRef.current();
           break;
         }
@@ -274,9 +280,18 @@ function Index() {
     };
     rec.onend = () => {
       // Browsers stop continuous recognition after a while; restart while enabled.
-      if (wakeOnRef.current) { try { rec.start(); } catch { /* ignore */ } }
+      if (wakeOnRef.current) setTimeout(() => { if (wakeOnRef.current) { try { rec.start(); } catch { /* ignore */ } } }, 300);
     };
-    rec.onerror = () => { /* onend restarts */ };
+    rec.onerror = (e) => {
+      const err = e?.error ?? "";
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        setWakeError("Microphone is blocked. Allow the microphone for this site, then turn it on again.");
+        wakeOnRef.current = false; setWakeOn(false);
+      } else if (err === "audio-capture") {
+        setWakeError("No microphone found.");
+        wakeOnRef.current = false; setWakeOn(false);
+      }
+    };
     wakeRef.current = rec;
     return () => { wakeOnRef.current = false; try { rec.stop(); } catch { /* ignore */ } wakeRef.current = null; };
   }, []);
@@ -285,7 +300,13 @@ function Index() {
     wakeOnRef.current = wakeOn;
     const rec = wakeRef.current;
     if (!rec) return;
-    if (wakeOn) { try { rec.start(); } catch { /* ignore */ } }
+    if (wakeOn) {
+      setWakeError(""); setWakeHeard("");
+      // Ask for mic permission first so the browser shows the prompt.
+      navigator.mediaDevices?.getUserMedia?.({ audio: true })
+        .then((st) => { st.getTracks().forEach((t) => t.stop()); try { rec.start(); } catch { /* ignore */ } })
+        .catch(() => { setWakeError("Microphone is blocked. Allow the microphone for this site, then try again."); setWakeOn(false); });
+    }
     else { try { rec.stop(); } catch { /* ignore */ } }
   }, [wakeOn]);
 
@@ -991,6 +1012,9 @@ function Index() {
                     ? "Like Siri — say \"Foco\" and he answers. He stays quiet while you study."
                     : "Voice wake-up isn't supported in this browser (try Chrome or Edge)."}
                 </div>
+                {wakeError && <div className="text-xs font-semibold text-destructive">{wakeError}</div>}
+                {wakeOn && wakeHeard && <div className="text-xs text-muted-foreground">Heard: “{wakeHeard}”</div>}
+                {wakeOn && running && <div className="text-xs text-muted-foreground">Quiet mode: Foco answers after your session.</div>}
               </div>
               <button
                 type="button"
