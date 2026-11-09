@@ -264,7 +264,7 @@ function Index() {
       onerror: ((e: { error?: string }) => void) | null;
     };
     rec.lang = "en-US";
-    rec.interimResults = false;
+    rec.interimResults = true;
     rec.continuous = true;
     rec.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
