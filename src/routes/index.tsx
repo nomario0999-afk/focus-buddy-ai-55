@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import focoMascot from "@/assets/foco-mascot.png";
+import ReactMarkdown from "react-markdown";
 import { checkFocus } from "@/lib/focus-check.functions";
 import { askTutor } from "@/lib/ask-tutor.functions";
 import { summarizeSession } from "@/lib/session-summary.functions";
@@ -946,15 +947,28 @@ function Index() {
                 </div>
               ) : (
                 chat.map((m, i) => (
-                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div key={i} className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {m.role === "assistant" && (
+                      <img src={focoMascot} alt="Foco" className="h-8 w-8 shrink-0 rounded-full bg-card object-contain" />
+                    )}
                     <div
-                      className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm shadow-sm ${
+                      className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
                         m.role === "user"
-                          ? "bg-primary text-primary-foreground"
+                          ? "whitespace-pre-wrap bg-primary text-primary-foreground"
                           : "bg-card text-foreground border border-border"
                       }`}
                     >
-                      {m.content}
+                      {m.role === "user" ? m.content : (
+                        <>
+                          <div className="space-y-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5 [&_strong]:font-bold [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold">
+                            <ReactMarkdown>{m.content}</ReactMarkdown>
+                          </div>
+                          <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
+                            <button type="button" className="hover:text-foreground" onClick={() => speak(m.content.replace(/[*#`_>]/g, ""))}>🔊 Read aloud</button>
+                            <button type="button" className="hover:text-foreground" onClick={() => { void navigator.clipboard?.writeText(m.content); }}>📋 Copy</button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
@@ -969,6 +983,31 @@ function Index() {
             </div>
 
             {askError && <div className="mt-2 text-xs text-destructive">{askError}</div>}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[
+                "Explain this simply",
+                "Give me an example",
+                "Quiz me with 3 questions",
+                "Make a 5-step study plan",
+                "Give me a memory trick",
+              ].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  disabled={askLoading}
+                  onClick={() => setQuestion(subject.trim() ? `${p} about ${subject.trim()}` : p)}
+                  className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-50"
+                >
+                  {p}
+                </button>
+              ))}
+              {chat.length > 0 && (
+                <button type="button" onClick={() => setChat([])} className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted">
+                  🧹 New chat
+                </button>
+              )}
+            </div>
 
             <form
               onSubmit={(e) => { e.preventDefault(); void handleAsk(); }}
