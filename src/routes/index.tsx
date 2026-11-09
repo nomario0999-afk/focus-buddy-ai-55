@@ -230,7 +230,7 @@ function Index() {
       onerror: ((e: { error?: string }) => void) | null;
     };
     rec.lang = "en-US";
-    rec.interimResults = true;
+    rec.interimResults = false;
     rec.continuous = false;
     rec.onresult = (e) => {
       let text = "";
