@@ -1,4 +1,5 @@
 # Focuser — open tasks
+- First-page Focuser video with sharing and download: done
 - One-minute motion-graphics ad: rendered and delivered
 - Foco voice rule: done — Foco stays silent during sessions (beeps only), speaks only when a session ends
 - Teacher account option and dashboard access: removed; old exam links redirect home, existing records retained

@@ -11,6 +11,7 @@ import ProfileHub from "@/components/ProfileHub";
 import ConsentGate from "@/components/ConsentGate";
 import CreditsPanel from "@/components/CreditsPanel";
 import FeedbackBox from "@/components/FeedbackBox";
+import FocuserVideo from "@/components/FocuserVideo";
 import GkChallenges from "@/components/GkChallenges";
 import QuizJourney from "@/components/QuizJourney";
 import { fmtAmount, isOwnerName } from "@/lib/owners";
@@ -666,6 +667,8 @@ function Index() {
           {profile ? `${profile.avatar} ${profile.name.split(" ")[0]} · 🪙 ${fmtAmount(credits)}` : "Create account"}
         </a>
       </header>
+
+      <FocuserVideo />
 
       {/* Hero */}
       <section className="mx-auto grid max-w-6xl items-center gap-8 px-6 pt-8 pb-16 md:grid-cols-2 md:pt-16">

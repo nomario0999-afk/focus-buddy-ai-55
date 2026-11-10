@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep the legacy exam URL redirecting to the study home page so removed teacher/payment screens cannot be opened from old links; retain existing records.
+- Keep the first-page promotional video in a dedicated component using CDN asset pointers, with user-initiated playback, sharing, and download; this avoids loading the full video before playback.
