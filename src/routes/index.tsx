@@ -214,10 +214,13 @@ function Index() {
   const [wakeSupported, setWakeSupported] = useState(false);
   const wakeRef = useRef<{ start: () => void; stop: () => void } | null>(null);
   const wakeOnRef = useRef(false);
-  const handleWakeRef = useRef<() => void>(() => {});
+  const handleWakeRef = useRef<(question: string | null) => void>(() => {});
+  const awaitingVoiceQuestion = useRef(false);
+  const voiceBusyRef = useRef(false);
+  const voiceSpeakingRef = useRef(false);
+  const speakAnswerRef = useRef<(text: string) => void>(() => {});
   const [wakeHeard, setWakeHeard] = useState("");
   const [wakeError, setWakeError] = useState("");
-  const lastWakeAt = useRef(0);
 
   useEffect(() => {
     const w = window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never };
@@ -261,7 +264,7 @@ function Index() {
     const rec = new Ctor() as unknown as {
       lang: string; interimResults: boolean; continuous: boolean;
       start: () => void; stop: () => void;
-      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>>; resultIndex: number }) => void) | null;
+      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>; resultIndex: number }) => void) | null;
       onend: (() => void) | null;
       onerror: ((e: { error?: string }) => void) | null;
     };
@@ -272,11 +275,15 @@ function Index() {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript.toLowerCase();
         setWakeHeard(t);
-        if (/(fo+ ?c|fo+ ?k|fu ?k|phok|phoc|photo|poco|poko|coco|focus|folk|fork|four ?co|for ?co|faux ?co)/.test(t)) {
-          if (Date.now() - lastWakeAt.current < 4000) break;
-          lastWakeAt.current = Date.now();
-          handleWakeRef.current();
-          break;
+        if (!e.results[i].isFinal || voiceBusyRef.current || voiceSpeakingRef.current) continue;
+        const match = /\b(?:foco|foko|fokko|fuko|poco|poko|coco|focus|photo|folk|fork|four co|for co|faux co)\b/i.exec(t);
+        if (match) {
+          const spokenQuestion = t.slice(match.index + match[0].length).replace(/^[\s,.:!?-]+/, "").trim();
+          awaitingVoiceQuestion.current = !spokenQuestion;
+          handleWakeRef.current(spokenQuestion || null);
+        } else if (awaitingVoiceQuestion.current) {
+          awaitingVoiceQuestion.current = false;
+          handleWakeRef.current(t.trim());
         }
       }
     };
@@ -306,7 +313,7 @@ function Index() {
       setWakeError(""); setWakeHeard("");
       // Ask for mic permission first so the browser shows the prompt.
       navigator.mediaDevices?.getUserMedia?.({ audio: true })
-        .then((st) => { st.getTracks().forEach((t) => t.stop()); try { rec.start(); } catch { /* ignore */ } })
+        .then((st) => { st.getTracks().forEach((t) => t.stop()); if (!wakeOnRef.current) return; try { rec.start(); } catch { /* ignore */ } })
         .catch(() => { setWakeError("Microphone is blocked. Allow the microphone for this site, then try again."); setWakeOn(false); });
     }
     else { try { rec.stop(); } catch { /* ignore */ } }
@@ -323,9 +330,9 @@ function Index() {
   useEffect(() => { try { localStorage.setItem("focuser.grade", grade); } catch { /* ignore */ } }, [grade]);
   useEffect(() => { try { localStorage.setItem("focuser.subject", subject); } catch { /* ignore */ } }, [subject]);
 
-  const handleAsk = useCallback(async () => {
-    const q = question.trim();
-    if (!q || askLoading) return;
+  const handleAsk = useCallback(async (spokenQuestion?: string) => {
+    const q = (spokenQuestion ?? question).trim();
+    if (!q || askLoading || voiceBusyRef.current) return;
     // The tutor is only ever blocked by one thing: running out of Focolara.
     if (profile && profile.credits < 1) {
       setAskError("You're out of Focolara — earn more through quizzes or focus streaks, or wait for your monthly refill.");
@@ -336,14 +343,19 @@ function Index() {
     setChat(nextHistory);
     setQuestion("");
     setAskLoading(true);
+    voiceBusyRef.current = true;
     try {
       const res = await runAsk({ data: { subject, grade, history: chat, question: q } });
       setChat([...nextHistory, { role: "assistant", content: res.answer }]);
+      if (spokenQuestion) speakAnswerRef.current(res.answer.replace(/[*#`_>]/g, ""));
       if (profile) addCredits(-1);
     } catch (e) {
       setAskError(e instanceof Error ? e.message : "Something went wrong.");
+      if (spokenQuestion) speakAnswerRef.current("I couldn't get an answer right now. Please check the message below and try again.");
       setChat(chat); // rollback the user message so they can retry
+      setQuestion(q);
     } finally {
+      voiceBusyRef.current = false;
       setAskLoading(false);
     }
   }, [question, askLoading, chat, subject, grade, runAsk, profile, addCredits]);
@@ -472,19 +484,26 @@ function Index() {
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 1.05;
       u.pitch = 1.1;
+      u.lang = "en-US";
+      u.volume = 1;
+      voiceSpeakingRef.current = true;
+      u.onend = () => { voiceSpeakingRef.current = false; };
+      u.onerror = () => { voiceSpeakingRef.current = false; setWakeError("Couldn't play the voice. You can still read Foco's answer below."); };
       window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
       window.speechSynthesis.speak(u);
-    } catch { /* ignore */ }
+    } catch { voiceSpeakingRef.current = false; }
   }, []);
 
   // Wake word reply: Foco only talks before or after a session, never while you study.
   const questionInputRef = useRef<HTMLInputElement | null>(null);
-  const handleWake = useCallback(() => {
-    if (running) return; // silent during a focus session
-    speak(`Yes? I'm here. Ask me anything about ${subject.trim() || "your subject"}.`);
+  const handleWake = useCallback((spokenQuestion: string | null) => {
+    if (running) { awaitingVoiceQuestion.current = false; return; } // silent during a focus session
+    if (spokenQuestion) { void handleAsk(spokenQuestion); return; }
+    speak("Yes? What would you like to ask?");
     questionInputRef.current?.focus();
-  }, [running, subject, speak]);
-  useEffect(() => { handleWakeRef.current = handleWake; }, [handleWake]);
+  }, [running, handleAsk, speak]);
+  useEffect(() => { handleWakeRef.current = handleWake; speakAnswerRef.current = speak; }, [handleWake, speak]);
 
   const beep = useCallback(() => {
     try {
@@ -1060,7 +1079,7 @@ function Index() {
               </div>
               <button
                 type="button"
-                onClick={() => setWakeOn((v) => !v)}
+                onClick={() => { window.speechSynthesis?.resume(); awaitingVoiceQuestion.current = false; setWakeOn((v) => !v); }}
                 disabled={!wakeSupported}
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
                   wakeOn ? "text-primary-foreground" : "border border-border hover:bg-muted"

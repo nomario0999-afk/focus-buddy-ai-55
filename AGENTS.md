@@ -11,3 +11,4 @@
 
 - Keep the legacy exam URL redirecting to the study home page so removed teacher/payment screens cannot be opened from old links; retain existing records.
 - Keep the first-page promotional video in a dedicated component using CDN asset pointers, with user-initiated playback, sharing, and download; this avoids loading the full video before playback.
+- Route final wake-word questions through the same tutor handler as typed questions and read its reply aloud outside focus sessions; ignore recognition during speech to prevent self-triggering.
